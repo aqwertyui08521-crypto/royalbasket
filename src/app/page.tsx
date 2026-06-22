@@ -25,6 +25,12 @@ export default function Home() {
     };
 
     fetchData();
+
+    // পেজ লোড হওয়ার সাথে সাথে লোকাল স্টোরেজ থেকে কার্টের ডেটা নিয়ে আসা
+    const savedCart = localStorage.getItem("royal_cart");
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
+    }
   }, []);
 
   const updateCart = (e: React.MouseEvent, id: string, delta: number) => {
@@ -32,12 +38,16 @@ export default function Home() {
     setCart((prev) => {
       const current = prev[id] || 0;
       const next = current + delta;
+      const newCart = { ...prev };
       if (next <= 0) {
-        const newCart = { ...prev };
         delete newCart[id];
-        return newCart;
+        if (Object.keys(newCart).length === 0) setIsCheckoutOpen(false);
+      } else {
+        newCart[id] = next;
       }
-      return { ...prev, [id]: next };
+      // কার্টে কোনো পরিবর্তন হলেই সেটা লোকাল স্টোরেজে সেভ করা
+      localStorage.setItem("royal_cart", JSON.stringify(newCart));
+      return newCart;
     });
     if (delta > 0) setIsCheckoutOpen(true);
   };
@@ -46,12 +56,15 @@ export default function Home() {
     setCart((prev) => {
       const current = prev[id] || 0;
       const next = current + delta;
+      const newCart = { ...prev };
       if (next <= 0) {
-        const newCart = { ...prev };
         delete newCart[id];
-        return newCart;
+        if (Object.keys(newCart).length === 0) setIsCheckoutOpen(false);
+      } else {
+        newCart[id] = next;
       }
-      return { ...prev, [id]: next };
+      localStorage.setItem("royal_cart", JSON.stringify(newCart));
+      return newCart;
     });
   };
 
@@ -67,15 +80,9 @@ export default function Home() {
           <Menu className="h-6 w-6 text-gray-700" />
           <h1 className="text-xl font-bold text-amber-800 tracking-tight">Royal Basket</h1>
         </div>
-        
-        {/* এখানে ক্লিক করলে কার্ট ফাঁকা থাকলেও মেনু খুলবে */}
         <div onClick={() => setIsCheckoutOpen(true)} className="relative bg-gray-100 p-2 rounded-full cursor-pointer hover:bg-gray-200 transition">
           <ShoppingCart className="h-5 w-5 text-gray-700" />
-          {totalCartItems > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full border border-white shadow-sm">
-              {totalCartItems}
-            </span>
-          )}
+          {totalCartItems > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full border border-white shadow-sm">{totalCartItems}</span>}
         </div>
       </header>
 
@@ -86,9 +93,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="bg-amber-800 text-white text-xs py-2 px-4 flex items-center justify-center gap-2 font-medium">
-        <Info className="h-4 w-4" /> REVIEW FINAL TOTAL BEFORE PAYMENT
-      </div>
+      <div className="bg-amber-800 text-white text-xs py-2 px-4 flex items-center justify-center gap-2 font-medium"><Info className="h-4 w-4" /> REVIEW FINAL TOTAL BEFORE PAYMENT</div>
 
       <main className="px-4 py-4 space-y-6">
         <div className="w-full h-40 bg-gradient-to-r from-amber-700 to-amber-500 rounded-xl flex flex-col justify-center px-6 text-white shadow-md">
@@ -97,16 +102,11 @@ export default function Home() {
         </div>
 
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-amber-600">⚡</span>
-            <h3 className="font-bold text-gray-800">Available Categories</h3>
-          </div>
+          <div className="flex items-center gap-2 mb-3"><span className="text-amber-600">⚡</span><h3 className="font-bold text-gray-800">Available Categories</h3></div>
           <div className="flex justify-between overflow-x-auto pb-2 gap-4 hide-scrollbar">
             {categories.map((cat) => (
               <div key={cat.id} onClick={() => router.push(`/category/${encodeURIComponent(cat.name)}`)} className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer active:scale-95 transition-transform">
-                <div className="h-16 w-16 bg-white rounded-full border-2 border-amber-100 shadow-sm flex items-center justify-center text-2xl">
-                  {cat.image_emoji}
-                </div>
+                <div className="h-16 w-16 bg-white rounded-full border-2 border-amber-100 shadow-sm flex items-center justify-center text-2xl">{cat.image_emoji}</div>
                 <span className="text-[10px] text-center font-medium text-gray-700 leading-tight">{cat.name}</span>
               </div>
             ))}
@@ -114,81 +114,61 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {products.length > 0 ? (
-            products.map((product) => {
-              const inCartCount = cart[product.id] || 0;
-              return (
-                <div key={product.id} onClick={() => router.push(`/product/${product.id}`)} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer active:scale-[0.98] transition-transform">
-                  <div className="h-32 bg-gray-50 flex items-center justify-center relative">
-                    <span className="absolute top-2 left-2 bg-red-50 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded">{product.discount_tag || "PREMIUM"}</span>
-                    <div className="h-20 w-20 bg-amber-100 rounded-full flex items-center justify-center text-3xl">🌰</div>
+          {products.length > 0 ? products.map((product) => {
+            const inCartCount = cart[product.id] || 0;
+            return (
+              <div key={product.id} onClick={() => router.push(`/product/${product.id}`)} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer active:scale-[0.98] transition-transform">
+                <div className="h-32 bg-gray-50 flex items-center justify-center relative">
+                  <span className="absolute top-2 left-2 bg-red-50 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded">{product.discount_tag || "PREMIUM"}</span>
+                  <div className="h-20 w-20 bg-amber-100 rounded-full flex items-center justify-center text-3xl">🌰</div>
+                </div>
+                <div className="p-2.5 flex flex-col flex-1">
+                  <div className="flex items-center gap-1 mb-1 bg-amber-50 w-fit px-1 rounded">
+                    <span className="text-[10px] font-bold text-amber-800">{product.rating}</span><Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
                   </div>
-                  <div className="p-2.5 flex flex-col flex-1">
-                    <div className="flex items-center gap-1 mb-1 bg-amber-50 w-fit px-1 rounded">
-                      <span className="text-[10px] font-bold text-amber-800">{product.rating}</span>
-                      <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
-                    </div>
-                    <h4 className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight flex-1">{product.name}</h4>
-                    <div className="mt-2 flex items-end gap-1.5">
-                      <span className="text-sm font-bold text-gray-900">₹{product.price}</span>
-                      {product.old_price && <span className="text-[10px] text-gray-400 line-through">₹{product.old_price}</span>}
-                    </div>
-                    <div className="mt-auto pt-3">
-                      {inCartCount > 0 ? (
-                        <div className="w-full bg-[#5C3A21] text-white font-bold py-1.5 rounded-lg flex items-center justify-between px-3 shadow-sm">
-                          <button onClick={(e) => updateCart(e, product.id, -1)} className="text-xl leading-none px-2 active:scale-75 transition-transform">−</button>
-                          <span className="text-xs">{inCartCount} in cart</span>
-                          <button onClick={(e) => updateCart(e, product.id, 1)} className="text-xl leading-none px-2 active:scale-75 transition-transform">+</button>
-                        </div>
-                      ) : (
-                        <button onClick={(e) => updateCart(e, product.id, 1)} className="w-full bg-white border border-[#5C3A21] text-[#5C3A21] font-bold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-amber-50 active:scale-95 transition-all">
-                          ADD <span className="text-lg leading-none">+</span>
-                        </button>
-                      )}
-                    </div>
+                  <h4 className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight flex-1">{product.name}</h4>
+                  <div className="mt-2 flex items-end gap-1.5">
+                    <span className="text-sm font-bold text-gray-900">₹{product.price}</span>
+                    {product.old_price && <span className="text-[10px] text-gray-400 line-through">₹{product.old_price}</span>}
+                  </div>
+                  <div className="mt-auto pt-3">
+                    {inCartCount > 0 ? (
+                      <div className="w-full bg-[#5C3A21] text-white font-bold py-1.5 rounded-lg flex items-center justify-between px-3 shadow-sm">
+                        <button onClick={(e) => updateCart(e, product.id, -1)} className="text-xl leading-none px-2 active:scale-75 transition-transform">−</button>
+                        <span className="text-xs">{inCartCount} in cart</span>
+                        <button onClick={(e) => updateCart(e, product.id, 1)} className="text-xl leading-none px-2 active:scale-75 transition-transform">+</button>
+                      </div>
+                    ) : (
+                      <button onClick={(e) => updateCart(e, product.id, 1)} className="w-full bg-white border border-[#5C3A21] text-[#5C3A21] font-bold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-amber-50 active:scale-95 transition-all">
+                        ADD <span className="text-lg leading-none">+</span>
+                      </button>
+                    )}
                   </div>
                 </div>
-              );
-            })
-          ) : (
-            <div className="col-span-2 flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-800"></div>
-            </div>
-          )}
+              </div>
+            );
+          }) : <div className="col-span-2 flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-800"></div></div>}
         </div>
       </main>
 
-      {/* Checkout Bottom Sheet */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex flex-col justify-end backdrop-blur-sm transition-opacity">
           <div className="bg-[#f8f8f8] w-full rounded-t-[24px] max-h-[85vh] flex flex-col animate-[slideUp_0.3s_ease-out]">
             <div className="flex justify-between items-center px-5 py-4 bg-white rounded-t-[24px]">
-              <div>
-                <h2 className="text-xl font-extrabold text-gray-900">Checkout</h2>
-                <p className="text-xs text-gray-500 font-medium mt-0.5">{totalCartItems} item{totalCartItems !== 1 ? 's' : ''}</p>
-              </div>
-              <button onClick={() => setIsCheckoutOpen(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition">
-                <X className="h-5 w-5 text-gray-600" />
-              </button>
+              <div><h2 className="text-xl font-extrabold text-gray-900">Checkout</h2><p className="text-xs text-gray-500 font-medium mt-0.5">{totalCartItems} item{totalCartItems !== 1 ? 's' : ''}</p></div>
+              <button onClick={() => setIsCheckoutOpen(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"><X className="h-5 w-5 text-gray-600" /></button>
             </div>
 
             {totalCartItems === 0 ? (
-              // Empty Cart State
               <div className="py-16 flex flex-col items-center justify-center text-center px-4">
-                <div className="bg-gray-200 h-24 w-24 rounded-full flex items-center justify-center mb-5 shadow-inner">
-                   <ShoppingCart className="h-10 w-10 text-gray-400" />
-                </div>
+                <div className="bg-gray-200 h-24 w-24 rounded-full flex items-center justify-center mb-5 shadow-inner"><ShoppingCart className="h-10 w-10 text-gray-400" /></div>
                 <h3 className="text-xl font-black text-gray-900 mb-2">Your cart is empty</h3>
                 <p className="text-sm text-gray-500 font-medium mb-8">Looks like you haven't added any premium dry fruits yet.</p>
-                <button 
-                  onClick={() => { setIsCheckoutOpen(false); router.push('/'); }} 
-                  className="bg-[#5C3A21] text-white font-extrabold py-3.5 px-8 rounded-2xl text-sm shadow-[0_4px_12px_rgba(92,58,33,0.3)] active:scale-95 transition-transform flex items-center gap-2"
-                >
+                <button onClick={() => { setIsCheckoutOpen(false); router.push('/'); }} className="bg-[#5C3A21] text-white font-extrabold py-3.5 px-8 rounded-2xl text-sm shadow-[0_4px_12px_rgba(92,58,33,0.3)] active:scale-95 transition-transform flex items-center gap-2">
                   Continue Shopping <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             ) : (
-              // Cart with Items State
               <>
                 <div className="overflow-y-auto px-4 py-4 space-y-4">
                   <div className="space-y-3">
@@ -208,17 +188,9 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
-
                 <div className="bg-white p-4 rounded-t-3xl shadow-[0_-8px_15px_-3px_rgba(0,0,0,0.08)] mt-auto pb-6">
-                  {totalSaved > 0 && (
-                    <div className="bg-[#F4EFE6] text-[#5C3A21] text-xs font-bold py-2.5 text-center rounded-xl mb-4 flex justify-center items-center gap-1.5">
-                      <Tag className="h-3.5 w-3.5 fill-[#5C3A21]" /> You saved ₹{totalSaved} on this order
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center mb-4 px-1">
-                    <span className="text-gray-600 text-sm font-medium">To Pay</span>
-                    <span className="text-2xl font-extrabold text-gray-900">₹{totalAmount}</span>
-                  </div>
+                  {totalSaved > 0 && <div className="bg-[#F4EFE6] text-[#5C3A21] text-xs font-bold py-2.5 text-center rounded-xl mb-4 flex justify-center items-center gap-1.5"><Tag className="h-3.5 w-3.5 fill-[#5C3A21]" /> You saved ₹{totalSaved} on this order</div>}
+                  <div className="flex justify-between items-center mb-4 px-1"><span className="text-gray-600 text-sm font-medium">To Pay</span><span className="text-2xl font-extrabold text-gray-900">₹{totalAmount}</span></div>
                   <button onClick={() => { localStorage.setItem("cartTotal", totalAmount.toString()); router.push(localStorage.getItem("deliveryAddress") ? "/payment" : "/address"); }} className="w-full bg-[#5C3A21] text-white font-bold py-4 rounded-2xl text-lg flex items-center justify-center gap-2 hover:bg-[#4a2e1a] active:scale-[0.98] transition-all shadow-md">
                     Proceed <ChevronRight className="h-5 w-5" />
                   </button>

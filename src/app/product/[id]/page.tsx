@@ -16,6 +16,14 @@ export default function ProductDetails({ params }: { params: Promise<{ id: strin
   const [inCartCount, setInCartCount] = useState(0);
 
   useEffect(() => {
+    const savedCart = localStorage.getItem("royal_cart");
+    if (savedCart) {
+      const parsed = JSON.parse(savedCart);
+      if (parsed[productId]) setInCartCount(parsed[productId]);
+    }
+  }, [productId]);
+
+  useEffect(() => {
     const fetchProductDetails = async () => {
       const supabaseUrl = "https://npzfzlkvdxweiaewnnem.supabase.co";
       const supabaseKey = "sb_publishable_it_SC_2dJQ8K4n7K4DqYjw_AaVk59xz";
@@ -38,6 +46,18 @@ export default function ProductDetails({ params }: { params: Promise<{ id: strin
   }, [productId]);
 
   const handleUpdateCart = (delta: number) => {
+    const next = inCartCount + delta;
+    if (next >= 0) {
+      setInCartCount(next);
+      const savedCart = localStorage.getItem("royal_cart");
+      let parsed = savedCart ? JSON.parse(savedCart) : {};
+      if (next === 0) delete parsed[productId];
+      else parsed[productId] = next;
+      localStorage.setItem("royal_cart", JSON.stringify(parsed));
+      localStorage.setItem("cartTotal", ((product?.price || 0) * (next > 0 ? next : 1)).toString());
+    }
+    return;
+    // Old code below is ignored by early return
     const next = inCartCount + delta;
     if (next >= 0) {
       setInCartCount(next);
