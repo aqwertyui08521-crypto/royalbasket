@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ShoppingCart, Menu, Search, Star, Info, Truck, X, Tag, ShieldCheck } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 export default function Home() {
+  const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -27,24 +29,38 @@ export default function Home() {
     fetchProducts();
   }, []);
 
-  // কার্টে প্রোডাক্ট যোগ বা কমানোর লজিক (সাথে অটোমেটিক মেনু খোলার ম্যাজিক)
-  const updateCart = (id: string, delta: number) => {
+  const updateCart = (e: React.MouseEvent, id: string, delta: number) => {
+    e.stopPropagation(); // ম্যাজিক: অ্যাড বাটনে ক্লিক করলে প্রোডাক্ট পেজ খুলবে না
     setCart((prev) => {
       const current = prev[id] || 0;
       const next = current + delta;
       if (next <= 0) {
         const newCart = { ...prev };
         delete newCart[id];
-        if (Object.keys(newCart).length === 0) setIsCheckoutOpen(false); // কার্ট ফাঁকা হলে মেনু বন্ধ
+        if (Object.keys(newCart).length === 0) setIsCheckoutOpen(false);
         return newCart;
       }
       return { ...prev, [id]: next };
     });
 
-    // ম্যাজিক: প্রোডাক্ট অ্যাড করার সাথে সাথেই Checkout মেনু খুলে যাবে
     if (delta > 0) {
       setIsCheckoutOpen(true);
     }
+  };
+
+  // Checkout-এর ভেতরের প্লাস-মাইনাস বাটনের জন্য আলাদা ফাংশন
+  const updateCartFromCheckout = (id: string, delta: number) => {
+    setCart((prev) => {
+      const current = prev[id] || 0;
+      const next = current + delta;
+      if (next <= 0) {
+        const newCart = { ...prev };
+        delete newCart[id];
+        if (Object.keys(newCart).length === 0) setIsCheckoutOpen(false);
+        return newCart;
+      }
+      return { ...prev, [id]: next };
+    });
   };
 
   const totalCartItems = Object.values(cart).reduce((sum, count) => sum + count, 0);
@@ -62,7 +78,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-100 pb-20 font-sans">
-      {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-40 px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Menu className="h-6 w-6 text-gray-700" />
@@ -82,7 +97,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Search */}
       <div className="bg-white px-4 py-3 border-b">
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -94,7 +108,6 @@ export default function Home() {
         <Info className="h-4 w-4" /> REVIEW FINAL TOTAL BEFORE PAYMENT
       </div>
 
-      {/* Main Content */}
       <main className="px-4 py-4 space-y-6">
         <div className="w-full h-40 bg-gradient-to-r from-amber-700 to-amber-500 rounded-xl flex flex-col justify-center px-6 text-white shadow-md">
           <h2 className="text-2xl font-bold leading-tight">Mega Dryfruit<br/>Sale</h2>
@@ -123,7 +136,11 @@ export default function Home() {
             products.map((product) => {
               const inCartCount = cart[product.id] || 0;
               return (
-                <div key={product.id} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
+                <div 
+                  key={product.id} 
+                  onClick={() => router.push(`/product/${product.id}`)}
+                  className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer active:scale-[0.98] transition-transform"
+                >
                   <div className="h-32 bg-gray-50 flex items-center justify-center relative">
                     <span className="absolute top-2 left-2 bg-red-50 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded">
                       {product.discount_tag}
@@ -149,12 +166,12 @@ export default function Home() {
                     <div className="mt-auto pt-3">
                       {inCartCount > 0 ? (
                         <div className="w-full bg-[#5C3A21] text-white font-bold py-1.5 rounded-lg flex items-center justify-between px-3 shadow-sm">
-                          <button onClick={() => updateCart(product.id, -1)} className="text-xl leading-none px-2 active:scale-75 transition-transform">−</button>
+                          <button onClick={(e) => updateCart(e, product.id, -1)} className="text-xl leading-none px-2 active:scale-75 transition-transform">−</button>
                           <span className="text-xs">{inCartCount} in cart</span>
-                          <button onClick={() => updateCart(product.id, 1)} className="text-xl leading-none px-2 active:scale-75 transition-transform">+</button>
+                          <button onClick={(e) => updateCart(e, product.id, 1)} className="text-xl leading-none px-2 active:scale-75 transition-transform">+</button>
                         </div>
                       ) : (
-                        <button onClick={() => updateCart(product.id, 1)} className="w-full bg-white border border-[#5C3A21] text-[#5C3A21] font-bold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-amber-50 active:scale-95 transition-all">
+                        <button onClick={(e) => updateCart(e, product.id, 1)} className="w-full bg-white border border-[#5C3A21] text-[#5C3A21] font-bold py-1.5 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-amber-50 active:scale-95 transition-all">
                           ADD <span className="text-lg leading-none">+</span>
                         </button>
                       )}
@@ -200,9 +217,9 @@ export default function Home() {
                       <div className="font-extrabold text-gray-900 mt-1 text-base">₹{p.price}</div>
                     </div>
                     <div className="bg-[#5C3A21] text-white rounded-xl flex items-center px-2.5 py-1.5 shadow-sm">
-                       <button onClick={() => updateCart(p.id, -1)} className="text-lg font-medium px-2 active:scale-75 transition-transform">−</button>
+                       <button onClick={() => updateCartFromCheckout(p.id, -1)} className="text-lg font-medium px-2 active:scale-75 transition-transform">−</button>
                        <span className="font-bold text-sm min-w-[20px] text-center">{cart[p.id]}</span>
-                       <button onClick={() => updateCart(p.id, 1)} className="text-lg font-medium px-2 active:scale-75 transition-transform">+</button>
+                       <button onClick={() => updateCartFromCheckout(p.id, 1)} className="text-lg font-medium px-2 active:scale-75 transition-transform">+</button>
                     </div>
                   </div>
                 ))}
