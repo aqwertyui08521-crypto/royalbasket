@@ -4,19 +4,16 @@ import { createClient } from "@supabase/supabase-js";
 export const revalidate = 0;
 
 export default async function Home() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  // Netlify-এর ঝামেলা এড়াতে আমরা সরাসরি চাবিগুলো এখানে বসিয়ে দিলাম
+  const supabaseUrl = "https://npzfzlkvdxweiaewnnem.supabase.co";
+  const supabaseKey = "sb_publishable_it_SC_2dJQ8K4n7K4DqYjw_AaVk59xz";
+  
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   const { data: products, error } = await supabase
     .from("products")
     .select("*")
     .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("Error fetching products:", error);
-  }
 
   const categories = [
     { name: "Dryfruit Combo", img: "🥜" },
@@ -109,7 +106,7 @@ export default async function Home() {
               </div>
             ))
           ) : (
-            <p className="text-sm text-gray-500 col-span-2 text-center py-8 bg-white p-4 rounded-xl border border-dashed border-gray-300">No products found. Please add to Supabase!</p>
+            <p className="text-sm text-gray-500 col-span-2 text-center py-8 bg-white p-4 rounded-xl border border-dashed border-gray-300">No products found.</p>
           )}
         </div>
       </main>
