@@ -1,36 +1,41 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Menu, Search, Star, Info, Truck, X, Tag, ShieldCheck } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Star, Truck, X, Tag } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
-export default function Home() {
+export default function CategoryPage({ params }: { params: Promise<{ name: string }> }) {
   const router = useRouter();
+  const resolvedParams = use(params);
+  const categoryName = decodeURIComponent(resolvedParams.name);
+
   const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchCategoryProducts = async () => {
       const supabaseUrl = "https://npzfzlkvdxweiaewnnem.supabase.co";
       const supabaseKey = "sb_publishable_it_SC_2dJQ8K4n7K4DqYjw_AaVk59xz";
       const supabase = createClient(supabaseUrl, supabaseKey);
 
+      // ডেটাবেস থেকে শুধুমাত্র এই ক্যাটাগরির প্রোডাক্টগুলো নিয়ে আসবে
       const { data } = await supabase
         .from("products")
         .select("*")
+        .eq("category", categoryName)
         .order("created_at", { ascending: true });
 
-      if (data) {
-        setProducts(data);
-      }
+      if (data) setProducts(data);
+      setLoading(false);
     };
 
-    fetchProducts();
-  }, []);
+    fetchCategoryProducts();
+  }, [categoryName]);
 
   const updateCart = (e: React.MouseEvent, id: string, delta: number) => {
-    e.stopPropagation(); // ম্যাজিক: অ্যাড বাটনে ক্লিক করলে প্রোডাক্ট পেজ খুলবে না
+    e.stopPropagation();
     setCart((prev) => {
       const current = prev[id] || 0;
       const next = current + delta;
@@ -42,13 +47,9 @@ export default function Home() {
       }
       return { ...prev, [id]: next };
     });
-
-    if (delta > 0) {
-      setIsCheckoutOpen(true);
-    }
+    if (delta > 0) setIsCheckoutOpen(true);
   };
 
-  // Checkout-এর ভেতরের প্লাস-মাইনাস বাটনের জন্য আলাদা ফাংশন
   const updateCartFromCheckout = (id: string, delta: number) => {
     setCart((prev) => {
       const current = prev[id] || 0;
@@ -64,87 +65,54 @@ export default function Home() {
   };
 
   const totalCartItems = Object.values(cart).reduce((sum, count) => sum + count, 0);
-  
   const totalAmount = products.reduce((sum, p) => sum + (p.price * (cart[p.id] || 0)), 0);
   const totalOldAmount = products.reduce((sum, p) => sum + ((p.old_price || p.price) * (cart[p.id] || 0)), 0);
   const totalSaved = totalOldAmount - totalAmount;
 
-  const categories = [
-    { name: "Dryfruit Combo", img: "🥜" },
-    { name: "Almonds", img: "🌰" },
-    { name: "Cashew Nuts", img: "🤍" },
-    { name: "Walnuts", img: "🧠" },
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-800"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 pb-20 font-sans">
-      <header className="bg-white shadow-sm sticky top-0 z-40 px-4 h-16 flex items-center justify-between">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-40 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Menu className="h-6 w-6 text-gray-700" />
-          <h1 className="text-xl font-bold text-amber-800 tracking-tight">Royal Basket</h1>
+          <button onClick={() => router.push('/')} className="bg-gray-100 p-1.5 rounded-full active:scale-95 transition">
+            <ArrowLeft className="h-5 w-5 text-gray-800" />
+          </button>
+          <h1 className="text-lg font-bold text-amber-800 tracking-tight">{categoryName}</h1>
         </div>
         
-        <div 
-          onClick={() => totalCartItems > 0 && setIsCheckoutOpen(true)}
-          className="relative bg-gray-100 p-2 rounded-full cursor-pointer hover:bg-gray-200 transition"
-        >
+        <div onClick={() => totalCartItems > 0 && setIsCheckoutOpen(true)} className="relative bg-gray-100 p-2 rounded-full cursor-pointer">
           <ShoppingCart className="h-5 w-5 text-gray-700" />
           {totalCartItems > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full border border-white shadow-sm">
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full border border-white">
               {totalCartItems}
             </span>
           )}
         </div>
       </header>
 
-      <div className="bg-white px-4 py-3 border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-          <input type="text" placeholder="Search products..." className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-amber-600" />
-        </div>
-      </div>
-
-      <div className="bg-amber-800 text-white text-xs py-2 px-4 flex items-center justify-center gap-2 font-medium">
-        <Info className="h-4 w-4" /> REVIEW FINAL TOTAL BEFORE PAYMENT
-      </div>
-
-      <main className="px-4 py-4 space-y-6">
-        <div className="w-full h-40 bg-gradient-to-r from-amber-700 to-amber-500 rounded-xl flex flex-col justify-center px-6 text-white shadow-md">
-          <h2 className="text-2xl font-bold leading-tight">Mega Dryfruit<br/>Sale</h2>
-          <p className="text-xs mt-2 opacity-90">FREE DELIVERY • PREMIUM QUALITY</p>
+      <main className="px-4 py-4">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-amber-600">⚡</span>
+          <h3 className="font-bold text-gray-800">Showing all {categoryName}</h3>
         </div>
 
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-amber-600">⚡</span>
-            <h3 className="font-bold text-gray-800">Available Categories</h3>
-          </div>
-          <div className="flex justify-between overflow-x-auto pb-2 gap-4 hide-scrollbar">
-            {categories.map((cat, idx) => (
-              <div key={idx} onClick={() => router.push(`/category/${encodeURIComponent(cat.name)}`)} className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer active:scale-95 transition-transform">
-                <div className="h-16 w-16 bg-white rounded-full border-2 border-amber-100 shadow-sm flex items-center justify-center text-2xl">
-                  {cat.img}
-                </div>
-                <span className="text-[10px] text-center font-medium text-gray-700 leading-tight">{cat.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
+        {/* Product Grid - ঠিক হোমপেজের মতো ডিজাইন */}
         <div className="grid grid-cols-2 gap-3">
           {products.length > 0 ? (
             products.map((product) => {
               const inCartCount = cart[product.id] || 0;
               return (
-                <div 
-                  key={product.id} 
-                  onClick={() => router.push(`/product/${product.id}`)}
-                  className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer active:scale-[0.98] transition-transform"
-                >
+                <div key={product.id} onClick={() => router.push(`/product/${product.id}`)} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer active:scale-[0.98] transition-transform">
                   <div className="h-32 bg-gray-50 flex items-center justify-center relative">
-                    <span className="absolute top-2 left-2 bg-red-50 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded">
-                      {product.discount_tag}
-                    </span>
+                    <span className="absolute top-2 left-2 bg-red-50 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded">{product.discount_tag}</span>
                     <div className="h-20 w-20 bg-amber-100 rounded-full flex items-center justify-center text-3xl">🌰</div>
                   </div>
                   
@@ -153,16 +121,11 @@ export default function Home() {
                       <span className="text-[10px] font-bold text-amber-800">{product.rating}</span>
                       <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
                     </div>
-                    
-                    <h4 className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight flex-1">
-                      {product.name}
-                    </h4>
-                    
+                    <h4 className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight flex-1">{product.name}</h4>
                     <div className="mt-2 flex items-end gap-1.5">
                       <span className="text-sm font-bold text-gray-900">₹{product.price}</span>
                       <span className="text-[10px] text-gray-400 line-through">₹{product.old_price}</span>
                     </div>
-                    
                     <div className="mt-auto pt-3">
                       {inCartCount > 0 ? (
                         <div className="w-full bg-[#5C3A21] text-white font-bold py-1.5 rounded-lg flex items-center justify-between px-3 shadow-sm">
@@ -181,8 +144,10 @@ export default function Home() {
               );
             })
           ) : (
-            <div className="col-span-2 flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-800"></div>
+            <div className="col-span-2 text-center py-10">
+              <div className="text-4xl mb-2">🛒</div>
+              <p className="text-sm text-gray-500 font-medium">No products available in this category yet.</p>
+              <p className="text-[10px] text-gray-400 mt-1">Admin will add them soon!</p>
             </div>
           )}
         </div>
@@ -192,16 +157,12 @@ export default function Home() {
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex flex-col justify-end backdrop-blur-sm transition-opacity">
           <div className="bg-[#f8f8f8] w-full rounded-t-[24px] max-h-[85vh] flex flex-col animate-[slideUp_0.3s_ease-out]">
-            
             <div className="flex justify-between items-center px-5 py-4 bg-white rounded-t-[24px]">
               <div>
                 <h2 className="text-xl font-extrabold text-gray-900">Checkout</h2>
                 <p className="text-xs text-gray-500 font-medium mt-0.5">{totalCartItems} item{totalCartItems > 1 ? 's' : ''}</p>
               </div>
-              <button 
-                onClick={() => setIsCheckoutOpen(false)} 
-                className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"
-              >
+              <button onClick={() => setIsCheckoutOpen(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition">
                 <X className="h-5 w-5 text-gray-600" />
               </button>
             </div>
@@ -213,7 +174,6 @@ export default function Home() {
                     <div className="h-16 w-16 bg-gray-50 rounded-xl flex items-center justify-center text-3xl border border-gray-100">🌰</div>
                     <div className="flex-1">
                       <h4 className="font-bold text-sm text-gray-900 leading-tight pr-2">{p.name}</h4>
-                      <div className="text-xs text-gray-500 mt-0.5">Premium</div>
                       <div className="font-extrabold text-gray-900 mt-1 text-base">₹{p.price}</div>
                     </div>
                     <div className="bg-[#5C3A21] text-white rounded-xl flex items-center px-2.5 py-1.5 shadow-sm">
@@ -223,29 +183,6 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <Tag className="h-4 w-4 text-[#5C3A21]" />
-                  <h3 className="font-extrabold text-gray-900 text-sm">Offers Available</h3>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] space-y-4">
-                  <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900">Buy 3 Get 1 Free</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">Add 3 more items</p>
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-400 tracking-wider">LOCKED</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900">Buy 5 Get 2 Free</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">Add 6 more items</p>
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-400 tracking-wider">LOCKED</span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -263,11 +200,9 @@ export default function Home() {
                 Proceed <span className="text-2xl leading-none mb-0.5">›</span>
               </button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 }
