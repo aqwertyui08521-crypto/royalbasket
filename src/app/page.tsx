@@ -7,30 +7,30 @@ import { createClient } from "@supabase/supabase-js";
 export default function Home() {
   const router = useRouter();
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]); // ডাইনামিক ক্যাটাগরির জন্য
   const [cart, setCart] = useState<Record<string, number>>({});
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       const supabaseUrl = "https://npzfzlkvdxweiaewnnem.supabase.co";
       const supabaseKey = "sb_publishable_it_SC_2dJQ8K4n7K4DqYjw_AaVk59xz";
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      const { data } = await supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: true });
+      // প্রোডাক্ট নিয়ে আসা
+      const { data: prodData } = await supabase.from("products").select("*").order("created_at", { ascending: true });
+      if (prodData) setProducts(prodData);
 
-      if (data) {
-        setProducts(data);
-      }
+      // ক্যাটাগরি নিয়ে আসা (সরাসরি ডেটাবেস থেকে!)
+      const { data: catData } = await supabase.from("categories").select("*").order("id", { ascending: true });
+      if (catData) setCategories(catData);
     };
 
-    fetchProducts();
+    fetchData();
   }, []);
 
   const updateCart = (e: React.MouseEvent, id: string, delta: number) => {
-    e.stopPropagation(); // ম্যাজিক: অ্যাড বাটনে ক্লিক করলে প্রোডাক্ট পেজ খুলবে না
+    e.stopPropagation();
     setCart((prev) => {
       const current = prev[id] || 0;
       const next = current + delta;
@@ -42,13 +42,9 @@ export default function Home() {
       }
       return { ...prev, [id]: next };
     });
-
-    if (delta > 0) {
-      setIsCheckoutOpen(true);
-    }
+    if (delta > 0) setIsCheckoutOpen(true);
   };
 
-  // Checkout-এর ভেতরের প্লাস-মাইনাস বাটনের জন্য আলাদা ফাংশন
   const updateCartFromCheckout = (id: string, delta: number) => {
     setCart((prev) => {
       const current = prev[id] || 0;
@@ -64,17 +60,9 @@ export default function Home() {
   };
 
   const totalCartItems = Object.values(cart).reduce((sum, count) => sum + count, 0);
-  
   const totalAmount = products.reduce((sum, p) => sum + (p.price * (cart[p.id] || 0)), 0);
   const totalOldAmount = products.reduce((sum, p) => sum + ((p.old_price || p.price) * (cart[p.id] || 0)), 0);
   const totalSaved = totalOldAmount - totalAmount;
-
-  const categories = [
-    { name: "Dryfruit Combo", img: "🥜" },
-    { name: "Almonds", img: "🌰" },
-    { name: "Cashew Nuts", img: "🤍" },
-    { name: "Walnuts", img: "🧠" },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-100 pb-20 font-sans">
@@ -84,10 +72,7 @@ export default function Home() {
           <h1 className="text-xl font-bold text-amber-800 tracking-tight">Royal Basket</h1>
         </div>
         
-        <div 
-          onClick={() => totalCartItems > 0 && setIsCheckoutOpen(true)}
-          className="relative bg-gray-100 p-2 rounded-full cursor-pointer hover:bg-gray-200 transition"
-        >
+        <div onClick={() => totalCartItems > 0 && setIsCheckoutOpen(true)} className="relative bg-gray-100 p-2 rounded-full cursor-pointer hover:bg-gray-200 transition">
           <ShoppingCart className="h-5 w-5 text-gray-700" />
           {totalCartItems > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold h-4 w-4 flex items-center justify-center rounded-full border border-white shadow-sm">
@@ -120,10 +105,10 @@ export default function Home() {
             <h3 className="font-bold text-gray-800">Available Categories</h3>
           </div>
           <div className="flex justify-between overflow-x-auto pb-2 gap-4 hide-scrollbar">
-            {categories.map((cat, idx) => (
-              <div key={idx} onClick={() => router.push(`/category/${encodeURIComponent(cat.name)}`)} className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer active:scale-95 transition-transform">
+            {categories.map((cat) => (
+              <div key={cat.id} onClick={() => router.push(`/category/${encodeURIComponent(cat.name)}`)} className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer active:scale-95 transition-transform">
                 <div className="h-16 w-16 bg-white rounded-full border-2 border-amber-100 shadow-sm flex items-center justify-center text-2xl">
-                  {cat.img}
+                  {cat.image_emoji}
                 </div>
                 <span className="text-[10px] text-center font-medium text-gray-700 leading-tight">{cat.name}</span>
               </div>
@@ -136,33 +121,21 @@ export default function Home() {
             products.map((product) => {
               const inCartCount = cart[product.id] || 0;
               return (
-                <div 
-                  key={product.id} 
-                  onClick={() => router.push(`/product/${product.id}`)}
-                  className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer active:scale-[0.98] transition-transform"
-                >
+                <div key={product.id} onClick={() => router.push(`/product/${product.id}`)} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col cursor-pointer active:scale-[0.98] transition-transform">
                   <div className="h-32 bg-gray-50 flex items-center justify-center relative">
-                    <span className="absolute top-2 left-2 bg-red-50 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded">
-                      {product.discount_tag}
-                    </span>
+                    <span className="absolute top-2 left-2 bg-red-50 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded">{product.discount_tag}</span>
                     <div className="h-20 w-20 bg-amber-100 rounded-full flex items-center justify-center text-3xl">🌰</div>
                   </div>
-                  
                   <div className="p-2.5 flex flex-col flex-1">
                     <div className="flex items-center gap-1 mb-1 bg-amber-50 w-fit px-1 rounded">
                       <span className="text-[10px] font-bold text-amber-800">{product.rating}</span>
                       <Star className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
                     </div>
-                    
-                    <h4 className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight flex-1">
-                      {product.name}
-                    </h4>
-                    
+                    <h4 className="text-xs font-semibold text-gray-800 line-clamp-2 leading-tight flex-1">{product.name}</h4>
                     <div className="mt-2 flex items-end gap-1.5">
                       <span className="text-sm font-bold text-gray-900">₹{product.price}</span>
                       <span className="text-[10px] text-gray-400 line-through">₹{product.old_price}</span>
                     </div>
-                    
                     <div className="mt-auto pt-3">
                       {inCartCount > 0 ? (
                         <div className="w-full bg-[#5C3A21] text-white font-bold py-1.5 rounded-lg flex items-center justify-between px-3 shadow-sm">
@@ -192,16 +165,12 @@ export default function Home() {
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex flex-col justify-end backdrop-blur-sm transition-opacity">
           <div className="bg-[#f8f8f8] w-full rounded-t-[24px] max-h-[85vh] flex flex-col animate-[slideUp_0.3s_ease-out]">
-            
             <div className="flex justify-between items-center px-5 py-4 bg-white rounded-t-[24px]">
               <div>
                 <h2 className="text-xl font-extrabold text-gray-900">Checkout</h2>
                 <p className="text-xs text-gray-500 font-medium mt-0.5">{totalCartItems} item{totalCartItems > 1 ? 's' : ''}</p>
               </div>
-              <button 
-                onClick={() => setIsCheckoutOpen(false)} 
-                className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition"
-              >
+              <button onClick={() => setIsCheckoutOpen(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition">
                 <X className="h-5 w-5 text-gray-600" />
               </button>
             </div>
@@ -213,7 +182,6 @@ export default function Home() {
                     <div className="h-16 w-16 bg-gray-50 rounded-xl flex items-center justify-center text-3xl border border-gray-100">🌰</div>
                     <div className="flex-1">
                       <h4 className="font-bold text-sm text-gray-900 leading-tight pr-2">{p.name}</h4>
-                      <div className="text-xs text-gray-500 mt-0.5">Premium</div>
                       <div className="font-extrabold text-gray-900 mt-1 text-base">₹{p.price}</div>
                     </div>
                     <div className="bg-[#5C3A21] text-white rounded-xl flex items-center px-2.5 py-1.5 shadow-sm">
@@ -223,29 +191,6 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <Tag className="h-4 w-4 text-[#5C3A21]" />
-                  <h3 className="font-extrabold text-gray-900 text-sm">Offers Available</h3>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] space-y-4">
-                  <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900">Buy 3 Get 1 Free</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">Add 3 more items</p>
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-400 tracking-wider">LOCKED</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900">Buy 5 Get 2 Free</h4>
-                      <p className="text-xs text-gray-500 mt-0.5">Add 6 more items</p>
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-400 tracking-wider">LOCKED</span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -263,11 +208,9 @@ export default function Home() {
                 Proceed <span className="text-2xl leading-none mb-0.5">›</span>
               </button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 }
