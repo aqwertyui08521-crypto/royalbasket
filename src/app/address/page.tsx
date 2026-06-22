@@ -19,9 +19,8 @@ export default function AddressPage() {
       alert("Please fill all the details!");
       return;
     }
-    // লোকাল স্টোরেজে ঠিকানা সেভ করা হচ্ছে
     localStorage.setItem("deliveryAddress", JSON.stringify(address));
-    router.push("/payment"); // সেভ হলে পেমেন্ট পেজে চলে যাবে
+    router.push("/payment");
   };
 
   return (
@@ -43,19 +42,19 @@ export default function AddressPage() {
           <div className="space-y-4">
             <div>
               <label className="text-xs font-bold text-gray-500 mb-1 block">Full Name</label>
-              <input value={address.name} onChange={(e) => setAddress({...address, name: e.target.value})} type="text" placeholder="e.g. Rahul Das" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-600" />
+              <input value={address.name} onChange={(e) => setAddress({...address, name: e.target.value})} type="text" placeholder="e.g. Samim" className="w-full p-3 bg-white border border-gray-300 rounded-xl text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" />
             </div>
             <div>
               <label className="text-xs font-bold text-gray-500 mb-1 block">Mobile Number</label>
-              <input value={address.phone} onChange={(e) => setAddress({...address, phone: e.target.value})} type="tel" placeholder="+91 9876543210" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-600" />
+              <input value={address.phone} onChange={(e) => setAddress({...address, phone: e.target.value})} type="tel" placeholder="+91 9876543210" className="w-full p-3 bg-white border border-gray-300 rounded-xl text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" />
             </div>
             <div>
               <label className="text-xs font-bold text-gray-500 mb-1 block">Full Address (House No, Street, Area)</label>
-              <textarea value={address.addressDetails} onChange={(e) => setAddress({...address, addressDetails: e.target.value})} rows={3} placeholder="123, VIP Road..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-600"></textarea>
+              <textarea value={address.addressDetails} onChange={(e) => setAddress({...address, addressDetails: e.target.value})} rows={3} placeholder="123, VIP Road..." className="w-full p-3 bg-white border border-gray-300 rounded-xl text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600"></textarea>
             </div>
             <div>
               <label className="text-xs font-bold text-gray-500 mb-1 block">PIN Code</label>
-              <input value={address.pin} onChange={(e) => setAddress({...address, pin: e.target.value})} type="number" placeholder="700052" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-600" />
+              <input value={address.pin} onChange={(e) => setAddress({...address, pin: e.target.value})} type="number" placeholder="700052" className="w-full p-3 bg-white border border-gray-300 rounded-xl text-sm font-bold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600" />
             </div>
           </div>
         </div>
