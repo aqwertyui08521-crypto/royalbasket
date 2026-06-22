@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false); // Checkout মেনু খোলার সুইচ
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -27,6 +27,7 @@ export default function Home() {
     fetchProducts();
   }, []);
 
+  // কার্টে প্রোডাক্ট যোগ বা কমানোর লজিক (সাথে অটোমেটিক মেনু খোলার ম্যাজিক)
   const updateCart = (id: string, delta: number) => {
     setCart((prev) => {
       const current = prev[id] || 0;
@@ -39,11 +40,15 @@ export default function Home() {
       }
       return { ...prev, [id]: next };
     });
+
+    // ম্যাজিক: প্রোডাক্ট অ্যাড করার সাথে সাথেই Checkout মেনু খুলে যাবে
+    if (delta > 0) {
+      setIsCheckoutOpen(true);
+    }
   };
 
   const totalCartItems = Object.values(cart).reduce((sum, count) => sum + count, 0);
   
-  // দামের হিসাব
   const totalAmount = products.reduce((sum, p) => sum + (p.price * (cart[p.id] || 0)), 0);
   const totalOldAmount = products.reduce((sum, p) => sum + ((p.old_price || p.price) * (cart[p.id] || 0)), 0);
   const totalSaved = totalOldAmount - totalAmount;
@@ -64,7 +69,6 @@ export default function Home() {
           <h1 className="text-xl font-bold text-amber-800 tracking-tight">Royal Basket</h1>
         </div>
         
-        {/* Cart Icon - এটাতে ক্লিক করলেই Checkout খুলবে */}
         <div 
           onClick={() => totalCartItems > 0 && setIsCheckoutOpen(true)}
           className="relative bg-gray-100 p-2 rounded-full cursor-pointer hover:bg-gray-200 transition"
@@ -78,7 +82,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Search Bar */}
+      {/* Search */}
       <div className="bg-white px-4 py-3 border-b">
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -92,13 +96,11 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="px-4 py-4 space-y-6">
-        {/* Banner */}
         <div className="w-full h-40 bg-gradient-to-r from-amber-700 to-amber-500 rounded-xl flex flex-col justify-center px-6 text-white shadow-md">
           <h2 className="text-2xl font-bold leading-tight">Mega Dryfruit<br/>Sale</h2>
           <p className="text-xs mt-2 opacity-90">FREE DELIVERY • PREMIUM QUALITY</p>
         </div>
 
-        {/* Categories */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-amber-600">⚡</span>
@@ -116,7 +118,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Product Grid */}
         <div className="grid grid-cols-2 gap-3">
           {products.length > 0 ? (
             products.map((product) => {
@@ -170,12 +171,11 @@ export default function Home() {
         </div>
       </main>
 
-      {/* CHECKOUT BOTTOM SHEET (আপনার স্ক্রিনশটের ম্যাজিক) */}
+      {/* Checkout Bottom Sheet */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex flex-col justify-end backdrop-blur-sm transition-opacity">
           <div className="bg-[#f8f8f8] w-full rounded-t-[24px] max-h-[85vh] flex flex-col animate-[slideUp_0.3s_ease-out]">
             
-            {/* Checkout Header */}
             <div className="flex justify-between items-center px-5 py-4 bg-white rounded-t-[24px]">
               <div>
                 <h2 className="text-xl font-extrabold text-gray-900">Checkout</h2>
@@ -189,10 +189,7 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Scrollable Content */}
             <div className="overflow-y-auto px-4 py-4 space-y-4">
-              
-              {/* Selected Items */}
               <div className="space-y-3">
                 {products.filter(p => cart[p.id]).map(p => (
                   <div key={p.id} className="bg-white p-3.5 rounded-2xl flex items-center gap-4 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)]">
@@ -211,7 +208,6 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Offers Section */}
               <div>
                 <div className="flex items-center gap-2 mb-2 px-1">
                   <Tag className="h-4 w-4 text-[#5C3A21]" />
@@ -236,7 +232,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Bottom Payment Footer */}
             <div className="bg-white p-4 rounded-t-3xl shadow-[0_-8px_15px_-3px_rgba(0,0,0,0.08)] mt-auto pb-6">
               {totalSaved > 0 && (
                 <div className="bg-[#F4EFE6] text-[#5C3A21] text-xs font-bold py-2.5 text-center rounded-xl mb-4 flex justify-center items-center gap-1.5">
@@ -253,26 +248,6 @@ export default function Home() {
             </div>
 
           </div>
-        </div>
-      )}
-
-      {/* Floating View Cart Button (Optional helper when bottom sheet is closed) */}
-      {!isCheckoutOpen && totalCartItems > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-40 animate-[slideUp_0.3s_ease-out]">
-          <button 
-            onClick={() => setIsCheckoutOpen(true)}
-            className="w-full bg-[#5C3A21] text-white p-4 rounded-2xl shadow-lg flex justify-between items-center"
-          >
-            <div className="flex items-center gap-2">
-              <div className="bg-white/20 px-2 py-1 rounded-lg text-xs font-bold border border-white/30">
-                {totalCartItems} item{totalCartItems > 1 ? 's' : ''}
-              </div>
-              <span className="font-bold ml-1">₹{totalAmount}</span>
-            </div>
-            <div className="font-bold flex items-center gap-1">
-              View Cart <span>›</span>
-            </div>
-          </button>
         </div>
       )}
 
