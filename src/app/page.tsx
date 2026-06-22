@@ -204,7 +204,7 @@ export default function Home() {
                 <span className="text-gray-600 text-sm font-medium">To Pay</span>
                 <span className="text-2xl font-extrabold text-gray-900">₹{totalAmount}</span>
               </div>
-              <button onClick={() => { localStorage.setItem("cartTotal", totalAmount.toString()); router.push("/payment"); }} className="w-full bg-[#5C3A21] text-white font-bold py-4 rounded-2xl text-lg flex items-center justify-center gap-2 hover:bg-[#4a2e1a] active:scale-[0.98] transition-all shadow-md">
+              <button onClick={() => { localStorage.setItem("cartTotal", totalAmount.toString()); router.push(localStorage.getItem("deliveryAddress") ? "/payment" : "/address"); }} className="w-full bg-[#5C3A21] text-white font-bold py-4 rounded-2xl text-lg flex items-center justify-center gap-2 hover:bg-[#4a2e1a] active:scale-[0.98] transition-all shadow-md">
                 Proceed <span className="text-2xl leading-none mb-0.5">›</span>
               </button>
             </div>
