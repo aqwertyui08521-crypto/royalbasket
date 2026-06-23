@@ -25,8 +25,8 @@ export default function BottomNav() {
     return () => { window.removeEventListener('storage', updateCount); clearInterval(interval); };
   }, []);
 
-  // Product, Admin, Payment, Success পেজগুলোতে Bottom Nav লুকানো থাকবে
-  if (pathname.startsWith('/admin') || pathname.startsWith('/payment') || pathname.startsWith('/address') || pathname.startsWith('/product/') || pathname.startsWith('/success')) {
+  // Checkout পেজকেও হাইড লিস্টে যোগ করা হলো
+  if (pathname.startsWith('/admin') || pathname.startsWith('/payment') || pathname.startsWith('/address') || pathname.startsWith('/product/') || pathname.startsWith('/success') || pathname.startsWith('/checkout')) {
     return null;
   }
 
