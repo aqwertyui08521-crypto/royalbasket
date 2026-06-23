@@ -25,7 +25,8 @@ export default function BottomNav() {
     return () => { window.removeEventListener('storage', updateCount); clearInterval(interval); };
   }, []);
 
-  if (pathname.startsWith('/admin') || pathname.startsWith('/payment') || pathname.startsWith('/address')) {
+  // Product, Admin, Payment, Success পেজগুলোতে Bottom Nav লুকানো থাকবে
+  if (pathname.startsWith('/admin') || pathname.startsWith('/payment') || pathname.startsWith('/address') || pathname.startsWith('/product/') || pathname.startsWith('/success')) {
     return null;
   }
 
@@ -39,13 +40,10 @@ export default function BottomNav() {
         <Package className={`h-5 w-5 mb-1 ${pathname === '/products' ? 'fill-[#5C3A21]/10' : ''}`} />
         <span className="text-[10px] font-bold">Products</span>
       </div>
-      
-      {/* নতুন Track আইকন */}
       <div onClick={() => router.push('/track')} className={`flex flex-col items-center justify-center w-full h-full cursor-pointer transition-colors ${pathname === '/track' ? 'text-[#5C3A21]' : 'text-gray-400 hover:text-gray-600'}`}>
         <Truck className={`h-5 w-5 mb-1 ${pathname === '/track' ? 'fill-[#5C3A21]/10' : ''}`} />
         <span className="text-[10px] font-bold">Track</span>
       </div>
-
       <div onClick={() => router.push('/cart')} className={`relative flex flex-col items-center justify-center w-full h-full cursor-pointer transition-colors ${pathname === '/cart' ? 'text-[#5C3A21]' : 'text-gray-400 hover:text-gray-600'}`}>
         <div className="relative">
           <ShoppingCart className={`h-5 w-5 mb-1 ${pathname === '/cart' ? 'fill-[#5C3A21]/10' : ''}`} />
