@@ -1,27 +1,32 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Package, ListOrdered, Settings, Tags, CheckCircle2, Users, Truck, Search, ShieldBan, MapPin } from "lucide-react";
+import { Lock, Package, ListOrdered, Settings, Tags, CheckCircle2, Users, ImageIcon, Star, FolderHeart, Truck, CreditCard } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient("https://npzfzlkvdxweiaewnnem.supabase.co", "sb_publishable_it_SC_2dJQ8K4n7K4DqYjw_AaVk59xz");
 
-export default function AdvancedAdminHub() {
+export default function MasterAdminHub() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [activeTab, setActiveTab] = useState("orders"); // Default tab now Orders
-  const [showToast, setShowToast] = useState(false);
+  const [activeTab, setActiveTab] = useState("settings");
   const [toastMsg, setToastMsg] = useState("");
 
   // DB States
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [banners, setBanners] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [trackingForm, setTrackingForm] = useState<Record<string, any>>({});
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [settings, setStoreSettings] = useState<any>({});
 
-  useEffect(() => {
-    if (sessionStorage.getItem("admin_auth_token") === "true") { setIsAuthenticated(true); fetchCoreData(); }
-  }, []);
+  // Forms
+  const [prodForm, setProdForm] = useState({ name: "", sku: "", price: "", old_price: "", weight: "1 Kg", category: "Dry Fruits", short_description: "", full_description: "", stock_quantity: "50", sale_badge: "NEW", gallery_urls: "" });
+  const [reviewForm, setReviewForm] = useState({ product_id: "", customer_name: "", rating: "5", review_text: "", photo_url: "" });
+  const [bannerForm, setBannerForm] = useState({ title: "", subtitle: "", image_url: "", cta_link: "/products" });
+
+  useEffect(() => { if (sessionStorage.getItem("admin_auth_token") === "true") { setIsAuthenticated(true); fetchCoreData(); } }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,149 +35,178 @@ export default function AdvancedAdminHub() {
   };
 
   const fetchCoreData = async () => {
-    const { data: ords } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-    if (ords) {
-       setOrders(ords);
-       const initTracking: Record<string, any> = {};
-       ords.forEach(o => { initTracking[o.id] = { tracking_number: o.tracking_number||'', courier_name: o.courier_name||'', est_delivery_date: o.est_delivery_date||'' }; });
-       setTrackingForm(initTracking);
-    }
-    const { data: custs } = await supabase.from("customers").select("*").order("created_at", { ascending: false });
-    if (custs) setCustomers(custs);
+    const { data: prods } = await supabase.from("products").select("*").order("created_at", { ascending: false }); if (prods) setProducts(prods);
+    const { data: cats } = await supabase.from("categories").select("*"); if (cats) setCategories(cats);
+    const { data: bans } = await supabase.from("banners").select("*"); if (bans) setBanners(bans);
+    const { data: ords } = await supabase.from("orders").select("*").order("created_at", { ascending: false }); if (ords) setOrders(ords);
+    const { data: revs } = await supabase.from("product_reviews").select("*, products(name)").order("created_at", { ascending: false }); if (revs) setReviews(revs);
+    const { data: setts } = await supabase.from("store_settings").select("*").eq("id", 1).single(); if (setts) setStoreSettings(setts);
   };
 
-  const triggerNotification = (msg: string) => { setToastMsg(msg); setShowToast(true); setTimeout(() => setShowToast(false), 3000); };
+  const triggerNotification = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(""), 3000); };
 
-  // --- Orders & Tracking Handlers ---
-  const updateOrderStatus = async (id: string, status: string) => {
-    await supabase.from("orders").update({ status }).eq("id", id);
-    triggerNotification("Order Status Updated!"); fetchCoreData();
+  // Handlers
+  const saveSettings = async () => { await supabase.from("store_settings").upsert({ id: 1, ...settings }); triggerNotification("Payment & Settings Saved!"); fetchCoreData(); };
+  
+  const saveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prodForm.name || !prodForm.price) return alert("Required fields missing");
+    const payload = { ...prodForm, price: parseFloat(prodForm.price), old_price: parseFloat(prodForm.old_price||'0'), stock_quantity: parseInt(prodForm.stock_quantity), image_gallery: prodForm.gallery_urls.split(",") };
+    await supabase.from("products").insert([payload]);
+    triggerNotification("Product Added!"); fetchCoreData();
   };
 
-  const updateTrackingInfo = async (id: string) => {
-    const info = trackingForm[id];
-    await supabase.from("orders").update({ tracking_number: info.tracking_number, courier_name: info.courier_name, est_delivery_date: info.est_delivery_date }).eq("id", id);
-    triggerNotification("Live Tracking Details Synced!"); fetchCoreData();
+  const saveReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if(!reviewForm.product_id || !reviewForm.customer_name) return alert("Missing fields");
+    await supabase.from("product_reviews").insert([{ ...reviewForm, rating: parseFloat(reviewForm.rating) }]);
+    triggerNotification("Review Added with Photo!"); fetchCoreData();
   };
 
-  // --- Customer Handlers ---
-  const toggleBlockCustomer = async (id: string, currentStatus: boolean) => {
-    await supabase.from("customers").update({ is_blocked: !currentStatus }).eq("id", id);
-    triggerNotification(currentStatus ? "Customer Unblocked!" : "Customer Blocked!"); fetchCoreData();
+  const saveBanner = async () => {
+    await supabase.from("banners").insert([bannerForm]); triggerNotification("Banner Added!"); fetchCoreData();
   };
+
+  const deleteRow = async (table: string, id: string) => { if(confirm("Delete?")) { await supabase.from(table).delete().eq("id", id); fetchCoreData(); } };
 
   if (!isAuthenticated) return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-center items-center p-4 font-sans"><div className="bg-white p-8 rounded-3xl shadow-xl border w-full max-w-sm text-center"><div className="h-16 w-16 bg-[#F4EFE6] rounded-full flex items-center justify-center mx-auto mb-4"><Lock className="h-8 w-8 text-[#5C3A21]" /></div><h1 className="text-xl font-black text-gray-900 mb-1">Ecom Security Check</h1><form onSubmit={handleLogin} className="space-y-4 mt-6"><input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border-2 p-4 rounded-xl text-center font-black tracking-widest text-lg focus:outline-none focus:border-[#5C3A21]"/><button type="submit" className="w-full bg-[#5C3A21] text-white font-extrabold py-3.5 rounded-xl shadow-md active:scale-95 transition">Unlock Dashboard</button></form></div></div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm text-center"><Lock className="h-10 w-10 text-[#5C3A21] mx-auto mb-4" /><form onSubmit={handleLogin}><input type="password" placeholder="Passcode" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border-2 p-4 rounded-xl text-center text-xl tracking-widest mb-4 focus:border-[#5C3A21]"/><button className="w-full bg-[#5C3A21] text-white py-4 rounded-xl font-bold">LOGIN</button></form></div></div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans">
-      <aside className="w-full md:w-64 bg-white border-r flex flex-col sticky top-0 z-50">
-         <div className="p-4 bg-[#5C3A21] text-white flex items-center gap-2"><Lock className="h-5 w-5"/> <h2 className="font-black text-sm uppercase">Royal Core v2</h2></div>
+      {/* SIDEBAR */}
+      <aside className="w-full md:w-56 bg-white border-r flex flex-col sticky top-0 z-50">
+         <div className="p-4 bg-[#5C3A21] text-white font-black uppercase">Admin Panel</div>
          <div className="flex overflow-x-auto md:flex-col p-2 gap-1 hide-scrollbar">
-            <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-3 p-3 rounded-xl font-bold text-xs uppercase ${activeTab === 'orders' ? 'bg-[#F4EFE6] text-[#5C3A21]' : 'text-gray-600 hover:bg-gray-50'}`}><ListOrdered className="h-4 w-4"/> Orders & Tracking</button>
-            <button onClick={() => setActiveTab('customers')} className={`flex items-center gap-3 p-3 rounded-xl font-bold text-xs uppercase ${activeTab === 'customers' ? 'bg-[#F4EFE6] text-[#5C3A21]' : 'text-gray-600 hover:bg-gray-50'}`}><Users className="h-4 w-4"/> Customers</button>
-            <button onClick={() => setActiveTab('products')} className={`flex items-center gap-3 p-3 rounded-xl font-bold text-xs uppercase ${activeTab === 'products' ? 'bg-[#F4EFE6] text-[#5C3A21]' : 'text-gray-600 hover:bg-gray-50'}`}><Package className="h-4 w-4"/> Inventory Core</button>
+            <button onClick={()=>setActiveTab('settings')} className={`flex items-center gap-2 p-3 rounded-xl font-bold text-xs uppercase ${activeTab==='settings'?'bg-[#F4EFE6] text-[#5C3A21]':''}`}><CreditCard className="h-4 w-4"/> Payments & Setup</button>
+            <button onClick={()=>setActiveTab('products')} className={`flex items-center gap-2 p-3 rounded-xl font-bold text-xs uppercase ${activeTab==='products'?'bg-[#F4EFE6] text-[#5C3A21]':''}`}><Package className="h-4 w-4"/> Products</button>
+            <button onClick={()=>setActiveTab('reviews')} className={`flex items-center gap-2 p-3 rounded-xl font-bold text-xs uppercase ${activeTab==='reviews'?'bg-[#F4EFE6] text-[#5C3A21]':''}`}><Star className="h-4 w-4"/> Reviews</button>
+            <button onClick={()=>setActiveTab('banners')} className={`flex items-center gap-2 p-3 rounded-xl font-bold text-xs uppercase ${activeTab==='banners'?'bg-[#F4EFE6] text-[#5C3A21]':''}`}><ImageIcon className="h-4 w-4"/> Banners</button>
+            <button onClick={()=>setActiveTab('orders')} className={`flex items-center gap-2 p-3 rounded-xl font-bold text-xs uppercase ${activeTab==='orders'?'bg-[#F4EFE6] text-[#5C3A21]':''}`}><ListOrdered className="h-4 w-4"/> Orders</button>
          </div>
       </aside>
 
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+      <main className="flex-1 p-4 overflow-y-auto">
          
-         {/* MODULE 3.1: ADVANCED ORDERS & TRACKING */}
-         {activeTab === 'orders' && (
-            <div className="space-y-6 animate-[fadeIn_0.2s_ease-out]">
-               <div className="flex justify-between items-center bg-white p-4 rounded-2xl border shadow-sm">
-                  <h2 className="text-lg font-black text-gray-900 flex items-center gap-2"><ListOrdered className="h-5 w-5 text-[#5C3A21]"/> Live Order Management</h2>
-                  <div className="bg-[#F4EFE6] text-[#5C3A21] px-3 py-1 rounded-full text-xs font-black">{orders.length} Total</div>
-               </div>
-
-               <div className="space-y-4">
-                  {orders.length === 0 ? <p className="text-center py-10 text-gray-500 font-bold">No orders found in database.</p> : orders.map(o => (
-                    <div key={o.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
-                       {/* Order Header */}
-                       <div className="flex justify-between items-start border-b border-gray-50 pb-4">
-                          <div>
-                             <div className="flex items-center gap-2 mb-1"><span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-black uppercase">{o.order_id}</span><span className="text-xs font-bold text-gray-500">{new Date(o.created_at).toLocaleString()}</span></div>
-                             <h3 className="text-sm font-black text-gray-900">{o.customer_name || 'Guest Customer'}</h3>
-                             <p className="text-xs font-bold text-gray-500">{o.phone || 'N/A'}</p>
-                             <p className="text-[10px] text-gray-400 mt-1 flex items-start gap-1 max-w-sm"><MapPin className="h-3 w-3 shrink-0"/> {o.address}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                             <p className="text-lg font-black text-[#5C3A21]">₹{o.total_amount}</p>
-                             <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">{o.payment_method}</p>
-                             
-                             {/* Advanced Status Dropdown */}
-                             <select value={o.status} onChange={(e) => updateOrderStatus(o.id, e.target.value)} className="mt-2 border-2 border-[#EADBC8] p-1.5 rounded-lg text-[10px] font-black bg-[#F4EFE6] text-[#5C3A21] focus:outline-none uppercase">
-                                <option value="pending">Pending</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="processing">Processing</option>
-                                <option value="packed">Packed</option>
-                                <option value="shipped">Shipped</option>
-                                <option value="out_for_delivery">Out For Delivery</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
-                                <option value="returned">Returned</option>
-                                <option value="refunded">Refunded</option>
-                             </select>
-                          </div>
-                       </div>
-
-                       {/* Advanced Tracking Injection */}
-                       <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                          <h4 className="text-xs font-black text-gray-900 mb-3 flex items-center gap-2"><Truck className="h-4 w-4 text-blue-600"/> Add Courier Tracking (Visible to Customer)</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                             <input type="text" placeholder="Courier Name (e.g. Delhivery, Bluedart)" value={trackingForm[o.id]?.courier_name || ''} onChange={e=>setTrackingForm({...trackingForm, [o.id]:{...trackingForm[o.id], courier_name:e.target.value}})} className="border p-2 rounded-lg text-xs font-bold" />
-                             <input type="text" placeholder="Tracking Number / AWB" value={trackingForm[o.id]?.tracking_number || ''} onChange={e=>setTrackingForm({...trackingForm, [o.id]:{...trackingForm[o.id], tracking_number:e.target.value}})} className="border p-2 rounded-lg text-xs font-bold uppercase" />
-                             <div className="flex gap-2">
-                                <input type="date" value={trackingForm[o.id]?.est_delivery_date || ''} onChange={e=>setTrackingForm({...trackingForm, [o.id]:{...trackingForm[o.id], est_delivery_date:e.target.value}})} className="border p-2 rounded-lg text-xs font-bold w-full" title="Estimated Delivery Date" />
-                                <button onClick={()=>updateTrackingInfo(o.id)} className="bg-blue-600 text-white px-3 rounded-lg text-[10px] font-black uppercase shrink-0 shadow-sm active:scale-95">Sync</button>
-                             </div>
-                          </div>
-                       </div>
-                    </div>
-                  ))}
-               </div>
-            </div>
-         )}
-
-         {/* MODULE 3.2: CUSTOMER MANAGEMENT */}
-         {activeTab === 'customers' && (
-            <div className="space-y-6 animate-[fadeIn_0.2s_ease-out]">
-               <div className="flex justify-between items-center bg-white p-4 rounded-2xl border shadow-sm">
-                  <h2 className="text-lg font-black text-gray-900 flex items-center gap-2"><Users className="h-5 w-5 text-[#5C3A21]"/> Customer Directory</h2>
-                  <div className="relative">
-                     <Search className="absolute left-3 top-2 h-4 w-4 text-gray-400" />
-                     <input type="text" placeholder="Search customer..." className="bg-gray-50 border p-2 pl-9 rounded-xl text-xs font-bold focus:outline-none focus:border-[#5C3A21]" />
+         {/* 1. PAYMENTS & SETTINGS */}
+         {activeTab === 'settings' && (
+            <div className="space-y-6">
+               <div className="bg-white p-6 rounded-2xl border shadow-sm max-w-2xl">
+                  <h3 className="font-black text-gray-900 mb-4 border-b pb-2 uppercase"><CreditCard className="inline h-5 w-5 mr-2"/> User Payment Gateways</h3>
+                  <div className="space-y-4">
+                     <div><label className="text-xs font-bold block mb-1">PhonePe UPI ID</label><input type="text" value={settings.phonepe_upi||''} onChange={e=>setStoreSettings({...settings, phonepe_upi:e.target.value})} className="w-full border p-3 rounded-xl text-xs" placeholder="yourname@ybl"/></div>
+                     <div><label className="text-xs font-bold block mb-1">Paytm / GPay UPI ID</label><input type="text" value={settings.paytm_upi||''} onChange={e=>setStoreSettings({...settings, paytm_upi:e.target.value})} className="w-full border p-3 rounded-xl text-xs" placeholder="number@paytm"/></div>
+                     <div><label className="text-xs font-bold block mb-1">QR Code Image Link</label><input type="text" value={settings.qr_code_url||''} onChange={e=>setStoreSettings({...settings, qr_code_url:e.target.value})} className="w-full border p-3 rounded-xl text-xs" placeholder="URL of your QR Code"/></div>
+                     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border">
+                        <span className="text-sm font-bold">Enable Cash on Delivery (COD)</span>
+                        <input type="checkbox" checked={settings.cod_enabled||false} onChange={e=>setStoreSettings({...settings, cod_enabled:e.target.checked})} className="h-5 w-5"/>
+                     </div>
                   </div>
                </div>
 
-               <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                  {customers.length === 0 ? <p className="text-center py-10 text-gray-500 font-bold">No registered customers yet.</p> : (
-                     <table className="w-full text-left border-collapse">
-                        <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-widest text-gray-500 border-b"><th className="p-4 font-black">Name & Phone</th><th className="p-4 font-black text-center">Total Orders</th><th className="p-4 font-black text-center">Status</th><th className="p-4 font-black text-right">Action</th></tr></thead>
-                        <tbody>
-                           {customers.map(c => (
-                              <tr key={c.id} className="border-b last:border-0 hover:bg-gray-50 transition">
-                                 <td className="p-4"><p className="text-sm font-black text-gray-900">{c.name}</p><p className="text-xs text-gray-500 font-bold">{c.phone}</p></td>
-                                 <td className="p-4 text-center font-black text-[#5C3A21]">{c.total_orders}</td>
-                                 <td className="p-4 text-center">{c.is_blocked ? <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] font-black uppercase">Blocked</span> : <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-[10px] font-black uppercase">Active</span>}</td>
-                                 <td className="p-4 text-right">
-                                    <button onClick={()=>toggleBlockCustomer(c.id, c.is_blocked)} className={`p-2 rounded-lg border text-xs font-black uppercase ${c.is_blocked ? 'bg-white text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>{c.is_blocked ? 'Unblock' : 'Block'}</button>
-                                 </td>
-                              </tr>
-                           ))}
-                        </tbody>
-                     </table>
-                  )}
+               <div className="bg-white p-6 rounded-2xl border shadow-sm max-w-2xl">
+                  <h3 className="font-black text-gray-900 mb-4 border-b pb-2 uppercase">Store Setup & Shipping</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                     <div><label className="text-xs font-bold block mb-1">Delivery Charge (₹)</label><input type="number" value={settings.shipping_charge||0} onChange={e=>setStoreSettings({...settings, shipping_charge:e.target.value})} className="w-full border p-3 rounded-xl text-xs"/></div>
+                     <div><label className="text-xs font-bold block mb-1">Support WhatsApp</label><input type="text" value={settings.support_phone||''} onChange={e=>setStoreSettings({...settings, support_phone:e.target.value})} className="w-full border p-3 rounded-xl text-xs"/></div>
+                  </div>
+                  <button onClick={saveSettings} className="w-full bg-[#5C3A21] text-white font-black py-4 rounded-xl text-xs uppercase tracking-widest">Save Payment & Settings</button>
                </div>
             </div>
          )}
 
-         {/* Fallbacks for other tabs */}
-         {activeTab === 'products' && ( <div className="p-6 bg-white rounded-2xl shadow-sm border"><h3 className="font-black mb-4">INVENTORY & SETTINGS ARE SECURE</h3><p className="text-sm text-gray-500">Your products, categories, coupons and settings are running perfectly in the background.</p></div> )}
-      </main>
+         {/* 2. PRODUCTS */}
+         {activeTab === 'products' && (
+            <div className="space-y-6">
+               <form onSubmit={saveProduct} className="bg-white p-6 rounded-2xl border shadow-sm">
+                  <h3 className="font-black mb-4 uppercase">Add New Product</h3>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                     <input type="text" placeholder="Name" value={prodForm.name} onChange={e=>setProdForm({...prodForm, name:e.target.value})} className="border p-2 rounded-lg text-xs" required/>
+                     <input type="number" placeholder="Price (₹)" value={prodForm.price} onChange={e=>setProdForm({...prodForm, price:e.target.value})} className="border p-2 rounded-lg text-xs" required/>
+                     <input type="number" placeholder="Old Price (₹)" value={prodForm.old_price} onChange={e=>setProdForm({...prodForm, old_price:e.target.value})} className="border p-2 rounded-lg text-xs"/>
+                     <input type="text" placeholder="Weight (e.g. 1Kg)" value={prodForm.weight} onChange={e=>setProdForm({...prodForm, weight:e.target.value})} className="border p-2 rounded-lg text-xs"/>
+                     <select value={prodForm.category} onChange={e=>setProdForm({...prodForm, category:e.target.value})} className="border p-2 rounded-lg text-xs bg-white">
+                        <option>Dry Fruits</option>{categories.map(c=><option key={c.id}>{c.name}</option>)}
+                     </select>
+                     <input type="text" placeholder="Stock Qty" value={prodForm.stock_quantity} onChange={e=>setProdForm({...prodForm, stock_quantity:e.target.value})} className="border p-2 rounded-lg text-xs"/>
+                  </div>
+                  <textarea placeholder="Short Description..." value={prodForm.short_description} onChange={e=>setProdForm({...prodForm, short_description:e.target.value})} className="w-full border p-2 rounded-lg text-xs mb-3"/>
+                  <input type="text" placeholder="Image URLs (Comma separated)" value={prodForm.gallery_urls} onChange={e=>setProdForm({...prodForm, gallery_urls:e.target.value})} className="w-full border p-2 rounded-lg text-xs mb-3"/>
+                  <button type="submit" className="w-full bg-[#5C3A21] text-white py-3 rounded-lg font-bold text-xs uppercase">Save Product</button>
+               </form>
+               <div className="bg-white p-4 rounded-2xl border shadow-sm">
+                  <h3 className="font-black mb-3">Live Products ({products.length})</h3>
+                  {products.map(p=>(<div key={p.id} className="flex justify-between border-b py-2 text-xs font-bold"><span>{p.name} (₹{p.price})</span><button onClick={()=>deleteRow("products", p.id)} className="text-red-500">Delete</button></div>))}
+               </div>
+            </div>
+         )}
 
-      {showToast && <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full shadow-xl font-black text-xs uppercase tracking-wider z-[999] animate-[slideDown_0.3s_ease-out]"><CheckCircle2 className="inline h-4 w-4 mr-2" /> {toastMsg}</div>}
+         {/* 3. REVIEWS & PHOTOS */}
+         {activeTab === 'reviews' && (
+            <div className="space-y-6">
+               <form onSubmit={saveReview} className="bg-white p-6 rounded-2xl border shadow-sm max-w-2xl">
+                  <h3 className="font-black mb-4 uppercase">Add Customer Review</h3>
+                  <div className="space-y-3">
+                     <select value={reviewForm.product_id} onChange={e=>setReviewForm({...reviewForm, product_id:e.target.value})} className="w-full border p-3 rounded-xl text-xs font-bold">
+                        <option value="">Select Product...</option>
+                        {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                     </select>
+                     <div className="grid grid-cols-2 gap-3">
+                        <input type="text" placeholder="Customer Name" value={reviewForm.customer_name} onChange={e=>setReviewForm({...reviewForm, customer_name:e.target.value})} className="border p-3 rounded-xl text-xs font-bold"/>
+                        <input type="number" step="0.1" placeholder="Rating (1-5)" value={reviewForm.rating} onChange={e=>setReviewForm({...reviewForm, rating:e.target.value})} className="border p-3 rounded-xl text-xs font-bold"/>
+                     </div>
+                     <textarea placeholder="Review Comment..." rows={3} value={reviewForm.review_text} onChange={e=>setReviewForm({...reviewForm, review_text:e.target.value})} className="w-full border p-3 rounded-xl text-xs font-bold"/>
+                     {/* Photo Add Option for Review */}
+                     <input type="text" placeholder="Review Photo Link (Optional)" value={reviewForm.photo_url} onChange={e=>setReviewForm({...reviewForm, photo_url:e.target.value})} className="w-full border p-3 rounded-xl text-xs font-bold"/>
+                     
+                     <button type="submit" className="w-full bg-[#5C3A21] text-white py-3.5 rounded-xl font-bold text-xs uppercase">Publish Review</button>
+                  </div>
+               </form>
+               <div className="bg-white p-4 rounded-2xl border shadow-sm max-w-2xl">
+                  <h3 className="font-black mb-3">Live Reviews</h3>
+                  {reviews.map(r=>(<div key={r.id} className="border-b py-3 text-xs">
+                     <p className="font-black">{r.customer_name} <span className="text-amber-500">({r.rating}★)</span></p>
+                     <p className="text-gray-600 my-1">{r.review_text}</p>
+                     {r.photo_url && <img src={r.photo_url} className="h-12 w-12 object-cover rounded mt-1 border" alt="review"/>}
+                     <button onClick={()=>deleteRow("product_reviews", r.id)} className="text-red-500 font-bold mt-2">Delete</button>
+                  </div>))}
+               </div>
+            </div>
+         )}
+
+         {/* 4. BANNERS */}
+         {activeTab === 'banners' && (
+            <div className="space-y-6">
+               <div className="bg-white p-6 rounded-2xl border shadow-sm max-w-md">
+                  <h3 className="font-black mb-4 uppercase">Add Sliding Banner</h3>
+                  <div className="space-y-3">
+                     <input type="text" placeholder="Title" value={bannerForm.title} onChange={e=>setBannerForm({...bannerForm, title:e.target.value})} className="w-full border p-2 rounded-lg text-xs" />
+                     <input type="text" placeholder="Image URL" value={bannerForm.image_url} onChange={e=>setBannerForm({...bannerForm, image_url:e.target.value})} className="w-full border p-2 rounded-lg text-xs" />
+                     <button onClick={saveBanner} className="w-full bg-[#5C3A21] text-white py-3 rounded-lg font-bold text-xs">Add Banner</button>
+                  </div>
+               </div>
+               <div className="bg-white p-4 rounded-2xl border shadow-sm max-w-md">
+                  {banners.map(b=>(<div key={b.id} className="flex justify-between border-b py-2 text-xs font-bold"><span>{b.title}</span><button onClick={()=>deleteRow("banners", b.id)} className="text-red-500">Del</button></div>))}
+               </div>
+            </div>
+         )}
+
+         {/* 5. ORDERS (Lite View) */}
+         {activeTab === 'orders' && (
+            <div className="bg-white p-6 rounded-2xl border shadow-sm">
+               <h3 className="font-black mb-4 uppercase">Recent Orders</h3>
+               {orders.map(o=>(
+                  <div key={o.id} className="border-b py-3 flex justify-between items-center text-xs">
+                     <div><p className="font-black">{o.order_id}</p><p className="text-gray-500">{o.customer_name} • ₹{o.total_amount}</p></div>
+                     <span className="bg-gray-100 px-2 py-1 rounded font-bold uppercase">{o.status}</span>
+                  </div>
+               ))}
+            </div>
+         )}
+
+      </main>
+      {toastMsg && <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full font-black text-xs z-[999]">{toastMsg}</div>}
     </div>
   );
 }
