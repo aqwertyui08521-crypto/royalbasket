@@ -1,6 +1,6 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Package, ShoppingCart, Headset } from "lucide-react";
+import { Home, Package, ShoppingCart, Headset, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function BottomNav() {
@@ -30,7 +30,7 @@ export default function BottomNav() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-16 z-[100] pb-1 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-between items-center h-16 z-[100] pb-1 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] px-2">
       <div onClick={() => router.push('/')} className={`flex flex-col items-center justify-center w-full h-full cursor-pointer transition-colors ${pathname === '/' ? 'text-[#5C3A21]' : 'text-gray-400 hover:text-gray-600'}`}>
         <Home className={`h-5 w-5 mb-1 ${pathname === '/' ? 'fill-[#5C3A21]/10' : ''}`} />
         <span className="text-[10px] font-bold">Home</span>
@@ -39,6 +39,13 @@ export default function BottomNav() {
         <Package className={`h-5 w-5 mb-1 ${pathname === '/products' ? 'fill-[#5C3A21]/10' : ''}`} />
         <span className="text-[10px] font-bold">Products</span>
       </div>
+      
+      {/* নতুন Track আইকন */}
+      <div onClick={() => router.push('/track')} className={`flex flex-col items-center justify-center w-full h-full cursor-pointer transition-colors ${pathname === '/track' ? 'text-[#5C3A21]' : 'text-gray-400 hover:text-gray-600'}`}>
+        <Truck className={`h-5 w-5 mb-1 ${pathname === '/track' ? 'fill-[#5C3A21]/10' : ''}`} />
+        <span className="text-[10px] font-bold">Track</span>
+      </div>
+
       <div onClick={() => router.push('/cart')} className={`relative flex flex-col items-center justify-center w-full h-full cursor-pointer transition-colors ${pathname === '/cart' ? 'text-[#5C3A21]' : 'text-gray-400 hover:text-gray-600'}`}>
         <div className="relative">
           <ShoppingCart className={`h-5 w-5 mb-1 ${pathname === '/cart' ? 'fill-[#5C3A21]/10' : ''}`} />
