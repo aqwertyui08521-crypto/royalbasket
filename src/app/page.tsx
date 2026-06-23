@@ -22,13 +22,13 @@ export default function HomePage() {
       
       const savedCart = localStorage.getItem("royal_cart");
       if (savedCart) setCart(JSON.parse(savedCart));
-      
       setLoading(false);
     };
     fetchData();
   }, []);
 
   const updateCart = (e: React.MouseEvent, id: string, delta: number) => {
+    e.preventDefault();
     e.stopPropagation();
     setCart((prev) => {
       const next = (prev[id] || 0) + delta;
@@ -39,6 +39,18 @@ export default function HomePage() {
       window.dispatchEvent(new Event("storage"));
       return newCart;
     });
+  };
+
+  const handleAddAndCheckout = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCart((prev) => {
+      const newCart = { ...prev, [id]: (prev[id] || 0) + 1 };
+      localStorage.setItem("royal_cart", JSON.stringify(newCart));
+      window.dispatchEvent(new Event("storage"));
+      return newCart;
+    });
+    router.push('/checkout');
   };
 
   useEffect(() => {
@@ -60,8 +72,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] pb-28 font-sans">
-      {/* Header - No Admin Text! */}
-      <header className="bg-white px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-40">
+      <header className="bg-white px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-40 border-b border-gray-100">
          <div className="flex items-center gap-2">
             <div className="h-8 w-8 bg-[#F4EFE6] rounded-full flex items-center justify-center text-lg">🌰</div>
             <h1 className="text-xl font-black text-gray-900 tracking-tight">Royal Basket</h1>
@@ -71,16 +82,14 @@ export default function HomePage() {
          </div>
       </header>
 
-      {/* Search Bar */}
       <div className="bg-white px-4 py-3 shadow-sm border-b border-gray-100 mb-3">
          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <input type="text" placeholder="Search premium dry fruits..." className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-9 pr-4 text-sm font-medium focus:outline-none focus:border-[#5C3A21] transition" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-black" />
+            <input type="text" placeholder="Search premium dry fruits..." className="w-full bg-white border-2 border-gray-800 rounded-xl py-2 pl-9 pr-4 text-sm font-bold text-black placeholder-gray-500 focus:outline-none focus:border-black transition shadow-sm" />
          </div>
       </div>
 
       <main>
-         {/* Banners */}
          {banners.length > 0 && (
            <div className="px-4 mb-5">
              <div ref={sliderRef} className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 rounded-2xl">
@@ -99,7 +108,6 @@ export default function HomePage() {
            </div>
          )}
 
-         {/* Categories */}
          <div className="mb-6">
             <h3 className="text-sm font-black text-gray-900 px-4 mb-3 uppercase tracking-wider">Shop by Category</h3>
             <div className="flex overflow-x-auto gap-4 px-4 pb-2 hide-scrollbar">
@@ -111,15 +119,14 @@ export default function HomePage() {
                  { name: "Dates", emoji: "🌴", color: "bg-red-50" },
                  { name: "Pistachios", emoji: "🟢", color: "bg-green-50" }
                ].map((cat, idx) => (
-                 <div key={idx} onClick={() => router.push('/products')} className="flex flex-col items-center gap-1.5 cursor-pointer">
-                    <div className={`h-16 w-16 ${cat.color} border border-white shadow-sm rounded-full flex items-center justify-center text-3xl`}>{cat.emoji}</div>
+                 <div key={idx} onClick={() => router.push(`/products?category=${cat.name}`)} className="flex flex-col items-center gap-1.5 cursor-pointer">
+                    <div className={`h-16 w-16 ${cat.color} border border-white shadow-sm rounded-full flex items-center justify-center text-3xl active:scale-95 transition`}>{cat.emoji}</div>
                     <span className="text-[10px] font-bold text-gray-700">{cat.name}</span>
                  </div>
                ))}
             </div>
          </div>
 
-         {/* Premium Range */}
          <div className="px-4">
             <div className="flex justify-between items-center mb-4">
                <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">Premium Range</h3>
@@ -146,14 +153,14 @@ export default function HomePage() {
                          </div>
                          
                          {inCart > 0 ? (
-                           <div className="bg-[#5C3A21] text-white rounded-lg flex items-center px-1.5 py-1 shadow-sm h-8">
+                           <div className="bg-[#5C3A21] text-white rounded-lg flex items-center px-1.5 py-1 shadow-sm h-8" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                              <button onClick={(e) => updateCart(e, p.id, -1)} className="text-lg font-black px-1.5 active:scale-75 transition">−</button>
                              <span className="font-black text-[10px] min-w-[14px] text-center">{inCart}</span>
                              <button onClick={(e) => updateCart(e, p.id, 1)} className="text-lg font-black px-1.5 active:scale-75 transition">+</button>
                            </div>
                          ) : (
-                           <button onClick={(e) => updateCart(e, p.id, 1)} className="bg-white border border-[#5C3A21] text-[#5C3A21] h-8 w-8 rounded-lg flex items-center justify-center shadow-sm active:scale-95 transition">
-                              <Plus className="h-4 w-4 stroke-[3]" />
+                           <button onClick={(e) => handleAddAndCheckout(e, p.id)} className="bg-[#5C3A21] text-white h-8 px-4 rounded-lg flex items-center justify-center shadow-sm active:scale-95 transition text-[10px] font-black tracking-widest uppercase">
+                              ADD
                            </button>
                          )}
                       </div>
