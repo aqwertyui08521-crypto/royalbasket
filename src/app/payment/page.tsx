@@ -82,7 +82,7 @@ export default function PaymentOptionsPage() {
         {/* Scan & Pay */}
         <div>
            <h3 className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">Scan & Pay</h3>
-           <div onClick={() => setPaymentMethod('qr')} className={`bg-white rounded-2xl p-4 flex items-center gap-4 cursor-pointer transition-all ${paymentMethod === 'qr' ? 'border-2 border-[#8B5A2B] shadow-sm bg-[#FFFDF9]' : 'border border-gray-200 shadow-sm'}`}>
+           <div onClick={() => router.push('/payment/qr')} className={`bg-white rounded-2xl p-4 flex items-center gap-4 cursor-pointer transition-all ${paymentMethod === 'qr' ? 'border-2 border-[#8B5A2B] shadow-sm bg-[#FFFDF9]' : 'border border-gray-200 shadow-sm'}`}>
               <div className="h-10 w-10 bg-[#F8F9FA] border border-gray-200 rounded-xl flex items-center justify-center shrink-0"><QrCode className="h-5 w-5 text-gray-700" /></div>
               <div className="flex-1">
                  <h4 className="text-sm font-extrabold text-gray-900">Scan QR Code</h4>
