@@ -19,11 +19,8 @@ export default function TrackOrderPage() {
       const { data } = await supabase.from("products").select("*");
       if (data) setAllProducts(data);
 
-      // মেমোরি থেকে অটোমেটিক রিসেন্ট অর্ডার খুঁজে বের করা
       const saved = localStorage.getItem("royal_recent_order");
-      if (saved) {
-        setRecentOrder(JSON.parse(saved));
-      }
+      if (saved) setRecentOrder(JSON.parse(saved));
     };
     fetchData();
   }, []);
@@ -57,30 +54,36 @@ export default function TrackOrderPage() {
            </form>
         </div>
 
-        {/* অটোমেটিক "Active Order" সেকশন */}
+        {/* Active Order Section */}
         {!isTracking && recentOrder && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 animate-[fadeIn_0.3s_ease-out]">
              <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
-                <div>
-                  <h3 className="font-extrabold text-gray-900 text-sm">Active Order</h3>
-                  <p className="text-[10px] text-gray-500 font-bold mt-0.5">{recentOrder.id}</p>
-                </div>
+                <div><h3 className="font-extrabold text-gray-900 text-sm">Active Order</h3><p className="text-[10px] text-gray-500 font-bold mt-0.5">{recentOrder.id}</p></div>
                 <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-md border border-amber-100 flex items-center gap-1"><Clock className="h-3 w-3"/> Processing</span>
              </div>
              
-             <div className="space-y-3 mb-5">
+             <div className="space-y-3 mb-4">
                 {Object.keys(recentOrder.items).map(prodId => {
                    const prod = getProductDetails(prodId);
                    return (
                      <div key={prodId} className="flex items-center gap-3">
                         <div className="h-12 w-12 bg-gray-50 rounded-xl flex items-center justify-center text-2xl border border-gray-100">🌰</div>
-                        <div className="flex-1">
-                          <h4 className="text-xs font-bold text-gray-900 leading-tight line-clamp-1">{prod.name}</h4>
-                          <p className="text-[10px] text-gray-500 mt-0.5 font-medium">Qty: {recentOrder.items[prodId]}</p>
-                        </div>
+                        <div className="flex-1"><h4 className="text-xs font-bold text-gray-900 leading-tight line-clamp-1">{prod.name}</h4><p className="text-[10px] text-gray-500 mt-0.5 font-medium">Qty: {recentOrder.items[prodId]}</p></div>
                      </div>
                    )
                 })}
+             </div>
+
+             {/* Added: Total Price and Address */}
+             <div className="pt-4 border-t border-gray-100 mb-4 space-y-3">
+                <div className="flex justify-between items-center">
+                   <span className="text-xs font-bold text-gray-500">Total Amount</span>
+                   <span className="text-sm font-black text-[#5C3A21]">₹{recentOrder.total}</span>
+                </div>
+                <div>
+                   <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Delivery Address</h3>
+                   <p className="text-xs text-gray-700 font-medium leading-relaxed flex items-start gap-1.5"><MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5"/> {recentOrder.address}</p>
+                </div>
              </div>
              
              <button onClick={() => { setOrderId(recentOrder.id); setIsTracking(true); }} className="w-full bg-[#F4EFE6] text-[#5C3A21] font-bold py-3 rounded-xl text-xs active:scale-95 transition flex items-center justify-center gap-1">
@@ -89,7 +92,7 @@ export default function TrackOrderPage() {
           </div>
         )}
 
-        {/* Tracking Timeline */}
+        {/* Full Tracking Timeline */}
         {isTracking && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 animate-[fadeIn_0.3s_ease-out]">
             <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
@@ -106,7 +109,7 @@ export default function TrackOrderPage() {
                <div className="relative opacity-40"><div className="absolute -left-6 bg-gray-200 h-6 w-6 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10"><MapPin className="h-3 w-3 text-gray-400" /></div><h4 className="text-sm font-bold text-gray-900 leading-tight">Delivered</h4><p className="text-[10px] text-gray-500 mt-0.5">Package will be handed over to you.</p></div>
             </div>
             
-            {/* Show specific ordered items in timeline if tracking the active order */}
+            {/* Extended Info inside Tracking */}
             {recentOrder && orderId.toUpperCase() === recentOrder.id.toUpperCase() && (
               <div className="mt-6 border-t border-gray-100 pt-5">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Item Details</h3>
@@ -115,14 +118,15 @@ export default function TrackOrderPage() {
                    return (
                      <div key={prodId} className="flex items-center gap-3 mb-3 last:mb-0">
                         <div className="h-10 w-10 bg-gray-50 rounded-lg flex items-center justify-center text-xl border border-gray-100">🌰</div>
-                        <div className="flex-1">
-                          <h4 className="text-xs font-bold text-gray-900 leading-tight">{prod.name}</h4>
-                          <p className="text-[10px] text-gray-500 mt-0.5">Qty: {recentOrder.items[prodId]}</p>
-                        </div>
+                        <div className="flex-1"><h4 className="text-xs font-bold text-gray-900 leading-tight">{prod.name}</h4><p className="text-[10px] text-gray-500 mt-0.5">Qty: {recentOrder.items[prodId]}</p></div>
                         <div className="text-xs font-black text-[#5C3A21]">₹{prod.price * recentOrder.items[prodId]}</div>
                      </div>
                    )
                 })}
+                <div className="pt-4 border-t border-gray-100 mt-4 space-y-3">
+                   <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-500">Total Amount</span><span className="text-sm font-black text-[#5C3A21]">₹{recentOrder.total}</span></div>
+                   <div><h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Delivery Address</h3><p className="text-xs text-gray-700 font-medium leading-relaxed flex items-start gap-1.5"><MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5"/> {recentOrder.address}</p></div>
+                </div>
               </div>
             )}
           </div>

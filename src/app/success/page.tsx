@@ -8,20 +8,22 @@ export default function SuccessPage() {
   const [orderId, setOrderId] = useState("");
 
   useEffect(() => {
-    // কার্টের ডেটা পড়ে সেটাকে "Recent Order" হিসেবে সেভ করা হচ্ছে
     const savedCart = localStorage.getItem("royal_cart");
+    const address = localStorage.getItem("deliveryAddress") || "Main City, Home Delivery";
+    const total = localStorage.getItem("cartTotal") || "0";
+    
     if (savedCart) {
       const newId = "RB-" + Math.floor(100000 + Math.random() * 900000);
       setOrderId(newId);
       localStorage.setItem("royal_recent_order", JSON.stringify({
         id: newId,
         items: JSON.parse(savedCart),
-        total: localStorage.getItem("cartTotal") || "0",
+        total: total,
+        address: address,
         date: new Date().toISOString()
       }));
     }
 
-    // অর্ডার সেভ হয়ে গেলে কার্ট ক্লিয়ার করে দেওয়া হচ্ছে
     localStorage.removeItem("royal_cart");
     localStorage.removeItem("cartTotal");
     window.dispatchEvent(new Event("storage"));
