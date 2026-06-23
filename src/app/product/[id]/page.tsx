@@ -264,7 +264,7 @@ export default function ProductDetails({ params }: { params: Promise<{ id: strin
                 <div className="bg-white p-4 rounded-t-3xl shadow-[0_-8px_15px_-3px_rgba(0,0,0,0.08)] mt-auto pb-6">
                   {totalSaved > 0 && <div className="bg-[#F4EFE6] text-[#5C3A21] text-xs font-bold py-2.5 text-center rounded-xl mb-4 flex justify-center items-center gap-1.5"><Tag className="h-3.5 w-3.5 fill-[#5C3A21]" /> You saved ₹{totalSaved} on this order</div>}
                   <div className="flex justify-between items-center mb-4 px-1"><span className="text-gray-600 text-sm font-medium">To Pay</span><span className="text-2xl font-extrabold text-gray-900">₹{totalAmount}</span></div>
-                  <button onClick={() => { localStorage.setItem("cartTotal", totalAmount.toString()); router.push(localStorage.getItem("deliveryAddress") ? "/payment" : "/address"); }} className="w-full bg-[#5C3A21] text-white font-bold py-4 rounded-2xl text-lg flex items-center justify-center gap-2 shadow-md">
+                  <button onClick={() => { localStorage.setItem("cartTotal", totalAmount.toString()); router.push("/checkout"); }} className="w-full bg-[#5C3A21] text-white font-bold py-4 rounded-2xl text-lg flex items-center justify-center gap-2 shadow-md">
                     Buy Now <ChevronRight className="h-5 w-5" />
                   </button>
                 </div>

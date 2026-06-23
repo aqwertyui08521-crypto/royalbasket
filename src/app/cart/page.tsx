@@ -90,7 +90,7 @@ export default function CartPage() {
               <span className="text-gray-900 font-black text-base">Grand Total</span>
               <span className="text-2xl font-black text-[#5C3A21]">₹{totalAmount}</span>
             </div>
-            <button onClick={() => { localStorage.setItem("cartTotal", totalAmount.toString()); router.push(localStorage.getItem("deliveryAddress") ? "/payment" : "/address"); }} className="w-full bg-[#5C3A21] text-white font-extrabold py-4 rounded-2xl text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-md">
+            <button onClick={() => { localStorage.setItem("cartTotal", totalAmount.toString()); router.push("/checkout"); }} className="w-full bg-[#5C3A21] text-white font-extrabold py-4 rounded-2xl text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-md">
               Buy Now <ChevronRight className="h-5 w-5" />
             </button>
           </div>
