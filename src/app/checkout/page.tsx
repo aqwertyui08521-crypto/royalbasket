@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Truck, ShieldCheck, QrCode, CreditCard, ChevronRight, Info } from "lucide-react";
+import { ArrowLeft, MapPin, Truck, ShieldCheck, QrCode, CreditCard, ChevronRight, Info, Star } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 export default function CheckoutPage() {
@@ -13,7 +13,7 @@ export default function CheckoutPage() {
   
   const [step, setStep] = useState(1);
   const [address, setAddress] = useState({ name: "", phone: "", street: "", city: "", pincode: "" });
-  const [paymentMethod, setPaymentMethod] = useState(""); // User will select
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [transactionId, setTransactionId] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -23,7 +23,6 @@ export default function CheckoutPage() {
       setCart(savedCart);
       const productIds = Object.keys(savedCart);
 
-      // Load saved address
       const savedAddress = localStorage.getItem("saved_address");
       if (savedAddress) setAddress(JSON.parse(savedAddress));
 
@@ -40,7 +39,6 @@ export default function CheckoutPage() {
     fetchCheckoutData();
   }, []);
 
-  // Calculate pricing correctly
   const itemTotal = products.reduce((sum, p) => sum + ((p.old_price || p.price) * (cart[p.id] || 0)), 0);
   const totalAmount = products.reduce((sum, p) => sum + (p.price * (cart[p.id] || 0)), 0);
   const productSavings = itemTotal - totalAmount;
@@ -48,7 +46,7 @@ export default function CheckoutPage() {
 
   const proceedToPayment = () => {
     if(!address.name || !address.phone || !address.street || !address.pincode) return alert("Please fill all address details securely.");
-    localStorage.setItem("saved_address", JSON.stringify(address)); // Save address so it doesn't disappear on refresh
+    localStorage.setItem("saved_address", JSON.stringify(address));
     setStep(2);
   };
 
@@ -255,16 +253,16 @@ export default function CheckoutPage() {
                      <div className="flex justify-between"><span>Item Total</span><span>₹{itemTotal}</span></div>
                      <div className="flex justify-between"><span>Product Savings</span><span className="text-green-600">- ₹{productSavings}</span></div>
                      <div className="flex justify-between pb-3 border-b border-gray-200 border-dashed"><span>Delivery Fee</span><span className="text-green-600">{settings.shipping_charge === 0 ? 'FREE' : `₹${settings.shipping_charge}`}</span></div>
-                     
-                     <div className="flex justify-between text-sm font-black text-black pt-2"><span>To Pay</span><span>â‚¹{finalAmount}</span></div>
+                     <div className="flex justify-between text-sm font-black text-black pt-2"><span>To Pay</span><span>₹{finalAmount}</span></div>
                   </div>
                </div>
 
                {/* CANCELLATION POLICY */}
-               <div className="bg-gray-100 p-3 rounded-xl flex gap-3 items-start mt-4">
+<div className="bg-gray-100 p-3 rounded-xl flex gap-3 items-start mt-4">
                   <Info className="h-4 w-4 text-gray-500 shrink-0 mt-0.5"/>
                   <p className="text-[10px] text-gray-500 font-bold leading-relaxed"><span className="text-black">Cancellation Policy:</span> Orders cannot be cancelled once packed for delivery. In case of unexpected delays, refund will be provided, if applicable.</p>
                </div>
+               
                <p className="text-center text-[10px] font-black text-gray-500 flex items-center justify-center gap-1 mt-4"><ShieldCheck className="h-3 w-3 text-[#5C3A21]"/> 100% Secure Payments</p>
             </div>
          )}
@@ -274,7 +272,8 @@ export default function CheckoutPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] z-50">
          {step === 1 ? (
             <button onClick={proceedToPayment} className="w-full bg-[#5C3A21] text-white font-extrabold py-3.5 rounded-xl shadow-md uppercase tracking-wider text-sm active:scale-[0.98] transition">PROCEED TO PAYMENT</button>
-         ) : (     <button onClick={handlePlaceOrder} disabled={isProcessing} className="w-full bg-[#5C3A21] text-white font-extrabold py-3.5 rounded-xl shadow-md text-sm active:scale-[0.98] transition flex justify-center items-center">
+         ) : (
+            <button onClick={handlePlaceOrder} disabled={isProcessing} className="w-full bg-[#5C3A21] text-white font-extrabold py-3.5 rounded-xl shadow-md text-sm active:scale-[0.98] transition flex justify-center items-center">
                {isProcessing ? <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div> : `Pay securely â‚¹${finalAmount}`}
             </button>
          )}
