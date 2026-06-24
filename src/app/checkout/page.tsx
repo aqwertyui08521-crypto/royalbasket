@@ -1,48 +1,53 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Truck, ShieldCheck, QrCode, CreditCard, Info } from "lucide-react";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [address, setAddress] = useState({ name: "", phone: "", room: "", village: "", locality: "", pincode: "" });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("saved_address");
+    if (saved) {
+      setAddress(JSON.parse(saved));
+      setStep(2);
+    }
+  }, []);
+
+  const saveAddress = () => {
+    if(!address.name || !address.phone) return alert("Please fill details");
+    localStorage.setItem("saved_address", JSON.stringify(address));
+    setStep(2);
+  };
+
+  if (step === 1) return (
+    <div className="min-h-screen bg-white text-black p-6 font-sans">
+      <h1 className="text-xl font-black uppercase mb-6 border-b border-black pb-2">Delivery Address</h1>
+      <div className="space-y-4">
+        <input placeholder="FULL NAME" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.name} onChange={(e) => setAddress({...address, name: e.target.value})} />
+        <input placeholder="PHONE NUMBER" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.phone} onChange={(e) => setAddress({...address, phone: e.target.value})} />
+        <input placeholder="ROOM / HOUSE NO" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.room} onChange={(e) => setAddress({...address, room: e.target.value})} />
+        <input placeholder="VILLAGE" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.village} onChange={(e) => setAddress({...address, village: e.target.value})} />
+        <input placeholder="LOCALITY / AREA" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.locality} onChange={(e) => setAddress({...address, locality: e.target.value})} />
+        <input placeholder="PINCODE" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.pincode} onChange={(e) => setAddress({...address, pincode: e.target.value})} />
+        <button onClick={saveAddress} className="w-full bg-black text-white py-5 font-black uppercase tracking-widest">Continue</button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-[#F5F7F9] pb-28 font-sans text-black">
-      <header className="bg-white px-4 h-14 flex items-center shadow-sm sticky top-0 z-40">
-        <button onClick={() => router.back()} className="mr-3"><ArrowLeft className="h-6 w-6"/></button>
-        <h1 className="text-lg font-black">{step === 1 ? 'Delivery Address' : 'Payment Options'}</h1>
-      </header>
-      <main className="p-4 space-y-4">
-        {step === 1 ? (
-          <div className="bg-white p-5 rounded-2xl shadow-sm">
-            <input type="text" placeholder="Full Name" className="w-full border-b p-3 mb-2 font-black"/>
-            <input type="tel" placeholder="Mobile Number" className="w-full border-b p-3 mb-2 font-black"/>
-            <input type="text" placeholder="Address" className="w-full border-b p-3 mb-4 font-black"/>
-            <button onClick={() => setStep(2)} className="w-full bg-[#5C3A21] text-white py-4 rounded-xl font-black uppercase">PROCEED</button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="bg-[#F4FAFE] p-4 rounded-xl flex gap-3 border border-[#E1F0FA]">
-              <Truck className="h-8 w-8 text-[#5C3A21]"/>
-              <div><p className="font-black">Free delivery applied!</p><p className="text-xs font-bold text-[#5C3A21]">You saved on this order</p></div>
-            </div>
-            <h3 className="text-[11px] font-black uppercase text-gray-500">Recommended UPI Options</h3>
-            <div className="bg-white p-4 rounded-2xl border-2 border-[#5C3A21] flex justify-between items-center">
-              <div className="flex items-center gap-3"><div className="h-10 w-10 bg-[#5E2B97] rounded-lg text-white font-black flex items-center justify-center">पे</div><div><p className="font-black text-sm">PhonePe</p><p className="text-[10px] font-bold text-gray-500">Android native PhonePe payment</p></div></div>
-              <div className="h-5 w-5 rounded-full border-2 border-[#5C3A21] flex items-center justify-center"><div className="h-2.5 w-2.5 bg-[#5C3A21] rounded-full"></div></div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border flex justify-between items-center">
-              <div className="flex items-center gap-3"><div className="h-10 w-10 bg-[#002970] rounded-lg text-white font-black text-[10px] flex items-center justify-center">Paytm</div><div><p className="font-black text-sm">Paytm UPI</p><p className="text-[10px] font-bold text-gray-500">UPI payment option available</p></div></div>
-              <div className="h-5 w-5 rounded-full border-2 border-gray-300"></div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl shadow-sm space-y-2">
-               <div className="flex justify-between font-bold text-sm"><span>Item Total</span><span>₹2547</span></div>
-               <div className="flex justify-between font-black text-lg pt-2 border-t"><span>To Pay</span><span>₹2547</span></div>
-            </div>
-            <button className="w-full bg-[#5C3A21] text-white py-4 rounded-xl font-black uppercase">PAY SECURELY ₹2547</button>
-          </div>
-        )}
-      </main>
+    <div className="min-h-screen bg-white text-black p-6 font-sans">
+      <div className="flex justify-between items-center mb-6 border-b border-black pb-2">
+        <h1 className="text-xl font-black uppercase">Checkout</h1>
+        <button onClick={() => setStep(1)} className="text-xs font-black underline uppercase">Change Address</button>
+      </div>
+      <div className="mb-6 p-4 border-2 border-black font-bold text-sm">
+        <p className="text-[10px] uppercase font-black text-gray-500 mb-1">Deliver to:</p>
+        <p>{address.name} | {address.phone}</p>
+        <p>{address.room}, {address.village}, {address.locality} - {address.pincode}</p>
+      </div>
+      <button className="w-full bg-black text-white py-5 font-black uppercase tracking-widest">Place Order</button>
     </div>
   );
 }
