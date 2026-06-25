@@ -9,45 +9,42 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const saved = localStorage.getItem("saved_address");
-    if (saved) {
-      setAddress(JSON.parse(saved));
-      setStep(2);
-    }
+    if (saved) { setAddress(JSON.parse(saved)); setStep(2); }
   }, []);
 
   const saveAddress = () => {
-    if(!address.name || !address.phone) return alert("Please fill details");
     localStorage.setItem("saved_address", JSON.stringify(address));
     setStep(2);
   };
 
-  if (step === 1) return (
-    <div className="min-h-screen bg-white text-black p-6 font-sans">
-      <h1 className="text-xl font-black uppercase mb-6 border-b border-black pb-2">Delivery Address</h1>
-      <div className="space-y-4">
-        <input placeholder="FULL NAME" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.name} onChange={(e) => setAddress({...address, name: e.target.value})} />
-        <input placeholder="PHONE NUMBER" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.phone} onChange={(e) => setAddress({...address, phone: e.target.value})} />
-        <input placeholder="ROOM / HOUSE NO" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.room} onChange={(e) => setAddress({...address, room: e.target.value})} />
-        <input placeholder="VILLAGE" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.village} onChange={(e) => setAddress({...address, village: e.target.value})} />
-        <input placeholder="LOCALITY / AREA" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.locality} onChange={(e) => setAddress({...address, locality: e.target.value})} />
-        <input placeholder="PINCODE" className="w-full border-2 border-black p-4 font-bold text-black placeholder-black" value={address.pincode} onChange={(e) => setAddress({...address, pincode: e.target.value})} />
-        <button onClick={saveAddress} className="w-full bg-black text-white py-5 font-black uppercase tracking-widest">Continue</button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-white text-black p-6 font-sans">
-      <div className="flex justify-between items-center mb-6 border-b border-black pb-2">
-        <h1 className="text-xl font-black uppercase">Checkout</h1>
-        <button onClick={() => setStep(1)} className="text-xs font-black underline uppercase">Change Address</button>
-      </div>
-      <div className="mb-6 p-4 border-2 border-black font-bold text-sm">
-        <p className="text-[10px] uppercase font-black text-gray-500 mb-1">Deliver to:</p>
-        <p>{address.name} | {address.phone}</p>
-        <p>{address.room}, {address.village}, {address.locality} - {address.pincode}</p>
-      </div>
-      <button className="w-full bg-black text-white py-5 font-black uppercase tracking-widest">Place Order</button>
+    <div className="min-h-screen bg-gray-50 p-4 font-sans text-black">
+      {step === 1 ? (
+        <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
+          <h1 className="text-xl font-black mb-6 uppercase">Delivery Address</h1>
+          <div className="space-y-4">
+            {["name", "phone", "room", "village", "locality", "pincode"].map((f) => (
+              <input key={f} placeholder={f.toUpperCase()} className="w-full bg-gray-100 p-4 rounded-xl font-bold border-none" 
+                     value={address[f as keyof typeof address]} onChange={(e) => setAddress({...address, [f]: e.target.value})} />
+            ))}
+            <button onClick={saveAddress} className="w-full bg-[#5C3A21] text-white py-4 rounded-xl font-black uppercase tracking-widest">Continue</button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="bg-white p-5 rounded-3xl shadow-xl border-t-4 border-[#5C3A21] -mt-2">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="font-black text-lg">Checkout</h1>
+              <button onClick={() => setStep(1)} className="text-xs font-black text-[#5C3A21] underline">Change</button>
+            </div>
+            <div className="bg-gray-200 p-4 rounded-2xl font-bold text-sm text-gray-700">
+              <p>{address.name} | {address.phone}</p>
+              <p>{address.room}, {address.village}, {address.locality} - {address.pincode}</p>
+            </div>
+          </div>
+          <button className="w-full bg-[#5C3A21] text-white py-4 rounded-2xl font-black uppercase shadow-lg">Place Order</button>
+        </div>
+      )}
     </div>
   );
 }
