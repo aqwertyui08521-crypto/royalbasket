@@ -10,6 +10,7 @@ export default function AdminProducts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [tempUrl, setTempUrl] = useState("");
 
   const [form, setForm] = useState({
     id: null, name: "", description: "", price: "", sale_price: "", 
@@ -22,8 +23,14 @@ export default function AdminProducts() {
   }, []);
 
   const fetchProducts = async () => {
-    const { data } = await supabase.from("products").select("*").order("id", { ascending: false });
+    const { data, error } = await supabase.from("products").select("*").order("id", { ascending: false });
+    if (error) console.error("Fetch Error:", error.message);
     if (data) setProducts(data);
+  };
+
+  const calculateDiscount = (mrp: number, sale: number) => {
+    if (!mrp || !sale || mrp <= sale) return 0;
+    return Math.round(((mrp - sale) / mrp) * 100);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,18 +48,16 @@ export default function AdminProducts() {
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `product-images/${fileName}`;
 
-        // এখানে 'images' বাকেট ব্যবহার করা হয়েছে
         const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
         
         if (uploadError) {
-          console.error("Upload error:", uploadError);
-          alert("Error: " + uploadError.message);
+          alert("Image Upload Error: " + uploadError.message);
           setUploading(false);
           return;
         }
 
         const { data } = supabase.storage.from('images').getPublicUrl(filePath);
-        if (i === 0 && !mainImage) mainImage = data.publicUrl;
+        if (!mainImage) mainImage = data.publicUrl;
         newGallery.push(data.publicUrl);
       }
 
@@ -62,6 +67,20 @@ export default function AdminProducts() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const addManualUrl = () => {
+    if (tempUrl) {
+      const newGallery = [...form.gallery, tempUrl];
+      setForm({ ...form, gallery: newGallery, image_url: form.image_url || tempUrl });
+      setTempUrl("");
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newGallery = [...form.gallery];
+    newGallery.splice(index, 1);
+    setForm({ ...form, gallery: newGallery, image_url: newGallery.length > 0 ? newGallery[0] : "" });
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -81,16 +100,26 @@ export default function AdminProducts() {
       is_active: form.is_active
     };
 
+    let saveError = null;
+
     if (form.id) {
-      await supabase.from("products").update(productData).eq("id", form.id);
+      const { error } = await supabase.from("products").update(productData).eq("id", form.id);
+      saveError = error;
     } else {
-      await supabase.from("products").insert([productData]);
+      const { error } = await supabase.from("products").insert([productData]);
+      saveError = error;
     }
     
-    setIsModalOpen(false);
-    fetchProducts();
     setLoading(false);
-    alert("Product saved globally in database!");
+
+    if (saveError) {
+      // যদি ডাটাবেস সেভ করতে না দেয়, তবে স্ক্রিনে বড় করে এরর দেখাবে
+      alert("❌ Database Error: " + saveError.message);
+    } else {
+      alert("✅ Product saved successfully!");
+      setIsModalOpen(false);
+      fetchProducts();
+    }
   };
 
   const editProduct = (p: any) => {
@@ -106,8 +135,12 @@ export default function AdminProducts() {
 
   const deleteProduct = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
-      await supabase.from("products").delete().eq("id", id);
-      fetchProducts();
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) {
+        alert("Delete Error: " + error.message);
+      } else {
+        fetchProducts();
+      }
     }
   };
 
@@ -132,24 +165,28 @@ export default function AdminProducts() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase())).map((p) => (
-            <div key={p.id} className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex gap-4 relative ${!p.is_active ? 'opacity-50' : ''}`}>
-              {!p.is_active && <span className="absolute top-2 right-2 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded">HIDDEN</span>}
-              <img src={p.image_url || 'https://via.placeholder.com/100'} className="w-20 h-20 rounded-xl object-cover bg-gray-50" />
-              <div className="flex-1">
-                <h3 className="font-bold text-sm text-gray-800 leading-tight">{p.name}</h3>
-                <p className="text-[10px] text-gray-500 font-bold mt-1">{p.weight} • {p.category}</p>
-                <div className="mt-1">
-                  <span className="font-black text-[#5C3A21] text-sm">₹{p.sale_price || p.price}</span>
-                  {p.sale_price && p.sale_price < p.price && <span className="text-[10px] text-gray-400 line-through ml-2">₹{p.price}</span>}
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <button onClick={() => editProduct(p)} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold w-full">Edit</button>
-                  <button onClick={() => deleteProduct(p.id)} className="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold w-full">Delete</button>
+          {products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase())).map((p) => {
+            const discount = calculateDiscount(p.price, p.sale_price);
+            return (
+              <div key={p.id} className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex gap-4 relative ${!p.is_active ? 'opacity-50' : ''}`}>
+                {!p.is_active && <span className="absolute top-2 right-2 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded">HIDDEN</span>}
+                <img src={p.image_url || 'https://via.placeholder.com/100'} className="w-20 h-20 rounded-xl object-cover bg-gray-50 border border-gray-100" />
+                <div className="flex-1">
+                  <h3 className="font-bold text-sm text-gray-800 leading-tight">{p.name}</h3>
+                  <p className="text-[10px] text-gray-500 font-bold mt-1">{p.weight} • {p.category}</p>
+                  <div className="mt-1 flex items-center flex-wrap gap-1">
+                    <span className="font-black text-[#5C3A21] text-sm">₹{p.sale_price || p.price}</span>
+                    {p.sale_price && p.sale_price < p.price && <span className="text-[10px] text-gray-400 line-through ml-1">₹{p.price}</span>}
+                    {discount > 0 && <span className="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded ml-1">{discount}% OFF</span>}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button onClick={() => editProduct(p)} className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold w-full">Edit</button>
+                    <button onClick={() => deleteProduct(p.id)} className="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold w-full">Delete</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -173,17 +210,21 @@ export default function AdminProducts() {
                 </label>
 
                 <div className="mt-4">
-                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">OR 2. Paste Image Link (Manual)</label>
-                  <input type="text" placeholder="Paste image URL here..." className="w-full bg-white border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={form.image_url} onChange={e=>setForm({...form, image_url: e.target.value})} />
+                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">OR 2. Paste Image Link</label>
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="Paste URL here..." className="w-full bg-white border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={tempUrl} onChange={e=>setTempUrl(e.target.value)} />
+                    <button type="button" onClick={addManualUrl} className="bg-[#5C3A21] text-white px-4 rounded-xl font-bold text-sm">Add</button>
+                  </div>
                 </div>
 
-                {(form.image_url || form.gallery.length > 0) && (
-                  <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
-                    {form.image_url && !form.gallery.includes(form.image_url) && (
-                      <img src={form.image_url} className="w-14 h-14 object-cover rounded-lg border border-gray-300" />
-                    )}
+                {form.gallery.length > 0 && (
+                  <div className="flex gap-3 mt-5 overflow-x-auto pb-2">
                     {form.gallery.map((img, i) => (
-                      <img key={i} src={img} className="w-14 h-14 object-cover rounded-lg border border-gray-300" />
+                      <div key={i} className="relative min-w-[60px]">
+                        <img src={img} className="w-16 h-16 object-cover rounded-lg border border-gray-300 shadow-sm" />
+                        <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-600">✕</button>
+                        {i === 0 && <span className="absolute -bottom-2 left-1 bg-green-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">MAIN</span>}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -201,7 +242,7 @@ export default function AdminProducts() {
                     <input required type="number" className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={form.price} onChange={e=>setForm({...form, price: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Sale Price (New Price)</label>
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Sale Price</label>
                     <input required type="number" className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={form.sale_price} onChange={e=>setForm({...form, sale_price: e.target.value})} />
                   </div>
                 </div>
@@ -228,11 +269,11 @@ export default function AdminProducts() {
               </div>
 
               <div className="flex gap-4">
-                <label className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 flex-1">
+                <label className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 flex-1 cursor-pointer">
                   <input type="checkbox" checked={form.in_stock} onChange={e=>setForm({...form, in_stock: e.target.checked})} className="w-4 h-4 accent-[#5C3A21]" />
                   <span className="font-bold text-xs">In Stock</span>
                 </label>
-                <label className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 flex-1">
+                <label className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 flex-1 cursor-pointer">
                   <input type="checkbox" checked={form.is_active} onChange={e=>setForm({...form, is_active: e.target.checked})} className="w-4 h-4 accent-[#5C3A21]" />
                   <span className="font-bold text-xs">Show Global</span>
                 </label>
