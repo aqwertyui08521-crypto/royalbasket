@@ -41,16 +41,17 @@ export default function AdminProducts() {
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `product-images/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage.from('public').upload(filePath, file);
+        // এখানে 'images' বাকেট ব্যবহার করা হয়েছে
+        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
         
         if (uploadError) {
           console.error("Upload error:", uploadError);
-          alert("Error: Please create a public bucket named 'public' in Supabase Storage.");
+          alert("Error: " + uploadError.message);
           setUploading(false);
           return;
         }
 
-        const { data } = supabase.storage.from('public').getPublicUrl(filePath);
+        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
         if (i === 0 && !mainImage) mainImage = data.publicUrl;
         newGallery.push(data.publicUrl);
       }
@@ -67,7 +68,6 @@ export default function AdminProducts() {
     e.preventDefault();
     setLoading(true);
     
-    // ডাটাবেসে গ্লোবালি সেভ করার জন্য ডেটা রেডি করা
     const productData = {
       name: form.name,
       description: form.description,
@@ -161,12 +161,10 @@ export default function AdminProducts() {
               <button onClick={() => setIsModalOpen(false)} className="bg-gray-100 w-8 h-8 rounded-full font-bold">✕</button>
             </div>
             
-            {/* Scrollable Form Body - Fixes overlapping issue */}
             <div className="p-5 overflow-y-auto space-y-5">
               
-              {/* Photo Upload Options */}
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">1. Upload from Gallery (Needs Supabase Bucket)</label>
+                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">1. Upload from Gallery</label>
                 <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" id="gallery-upload" />
                 <label htmlFor="gallery-upload" className="w-full bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer active:bg-gray-50">
                   <span className="text-2xl">📸</span>
@@ -179,7 +177,6 @@ export default function AdminProducts() {
                   <input type="text" placeholder="Paste image URL here..." className="w-full bg-white border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={form.image_url} onChange={e=>setForm({...form, image_url: e.target.value})} />
                 </div>
 
-                {/* Photo Preview */}
                 {(form.image_url || form.gallery.length > 0) && (
                   <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
                     {form.image_url && !form.gallery.includes(form.image_url) && (
@@ -192,7 +189,6 @@ export default function AdminProducts() {
                 )}
               </div>
 
-              {/* Product Details */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Product Name</label>
@@ -231,7 +227,6 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Checkboxes */}
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 flex-1">
                   <input type="checkbox" checked={form.in_stock} onChange={e=>setForm({...form, in_stock: e.target.checked})} className="w-4 h-4 accent-[#5C3A21]" />
@@ -244,7 +239,6 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            {/* Sticky Footer Buttons */}
             <div className="p-4 border-t border-gray-100 flex gap-3 bg-white rounded-b-3xl">
               <button onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-100 text-gray-700 py-3.5 rounded-xl font-bold">Cancel</button>
               <button onClick={handleSave} disabled={loading || uploading} className="flex-1 bg-[#5C3A21] text-white py-3.5 rounded-xl font-bold">
