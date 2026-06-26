@@ -15,11 +15,11 @@ export default function CheckoutPage() {
   const [amount, setAmount] = useState(0); 
 
   useEffect(() => {
-    // 1. Load Saved Address
+    // ১. সেভ করা অ্যাড্রেস লোড করা হচ্ছে
     const saved = localStorage.getItem("saved_address");
     if (saved) { setAddress(JSON.parse(saved)); setStep(2); }
     
-    // 2. Load UPI Settings
+    // ২. অ্যাডমিন প্যানেল থেকে UPI সেটিংস লোড করা হচ্ছে
     supabase.from("store_settings").select("*").eq("id", 1).single().then(({data}) => {
        if(data) setUpi({ 
          phonepe: data.phonepe_upi || "", 
@@ -28,31 +28,34 @@ export default function CheckoutPage() {
        });
     });
 
-    // 3. Robust Cart Price Calculation (₹ চিহ্ন এবং অন্যান্য সমস্যা ফিক্স)
-    try {
-      const cartData = localStorage.getItem("cart") || localStorage.getItem("cartItems");
-      if (cartData) {
-        const items = JSON.parse(cartData);
-        let calculatedTotal = 0;
-        
-        items.forEach((item: any) => {
-          // দামের আগে থাকা ₹ বা কমা মুছে শুধু সংখ্যাটা নেওয়া হচ্ছে
-          const rawPrice = String(item.price || item.sale_price || item.price_old || 0).replace(/[^0-9.]/g, '');
-          const rawQty = String(item.quantity || item.qty || 1).replace(/[^0-9.]/g, '');
-          calculatedTotal += (Number(rawPrice) * Number(rawQty));
-        });
-
-        // যদি আপনার শপিং কার্ট আগে থেকেই "cartTotal" নামে টোটাল সেভ করে রাখে
-        const savedTotal = localStorage.getItem("cartTotal") || localStorage.getItem("grandTotal");
-        if (savedTotal) {
-           setAmount(Number(String(savedTotal).replace(/[^0-9.]/g, '')));
-        } else {
-           setAmount(calculatedTotal);
+    // ৩. royal_cart থেকে প্রোডাক্টের আসল দাম বের করার লজিক
+    const loadCartTotal = async () => {
+      try {
+        const savedCart = localStorage.getItem("royal_cart");
+        if (savedCart) {
+          const cartItems = JSON.parse(savedCart); // এটা শুধু আইডি আর কোয়ান্টিটি দেয়
+          
+          // প্রোডাক্টের দাম জানার জন্য ডাটাবেস থেকে সব প্রোডাক্ট আনা হচ্ছে
+          const { data: products } = await supabase.from("products").select("*");
+          
+          if (products) {
+            let calculatedTotal = 0;
+            products.forEach((p: any) => {
+              const qty = cartItems[p.id];
+              if (qty > 0) {
+                const price = Number(p.sale_price || p.price || 0);
+                calculatedTotal += (price * qty);
+              }
+            });
+            setAmount(calculatedTotal); // এখন একদম পারফেক্ট দাম সেট হবে!
+          }
         }
+      } catch (error) {
+        console.error("Error calculating total", error);
       }
-    } catch (error) {
-      console.error("Cart price calculation error");
-    }
+    };
+
+    loadCartTotal();
   }, []);
 
   const saveAddress = () => { 
@@ -63,7 +66,7 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = () => {
     if (!selectedPayment) return alert("Please select a payment option first.");
-    if (amount === 0) return alert("Error! Cart total is ₹0. Please go back and add items again.");
+    if (amount === 0) return alert("Please wait a second, calculating cart total...");
     
     let upiId = "";
     if (selectedPayment === "phonepe") upiId = upi.phonepe;
