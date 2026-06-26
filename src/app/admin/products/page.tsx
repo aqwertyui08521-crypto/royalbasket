@@ -6,6 +6,7 @@ const supabase = createClient("https://npzfzlkvdxweiaewnnem.supabase.co", "sb_pu
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
+  const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,7 +26,12 @@ export default function AdminProducts() {
   const fetchProducts = async () => {
     const { data, error } = await supabase.from("products").select("*").order("id", { ascending: false });
     if (error) console.error("Fetch Error:", error.message);
-    if (data) setProducts(data);
+    if (data) {
+      setProducts(data);
+      // Extract unique categories to help user choose easily
+      const cats = Array.from(new Set(data.map((p: any) => p.category).filter(Boolean)));
+      setExistingCategories(cats as string[]);
+    }
   };
 
   const calculateDiscount = (mrp: number, sale: number) => {
@@ -87,7 +93,6 @@ export default function AdminProducts() {
     e.preventDefault();
     setLoading(true);
     
-    // Force main image if empty but gallery has images
     const finalImageUrl = form.image_url || (form.gallery && form.gallery.length > 0 ? form.gallery[0] : "");
 
     const productData = {
@@ -165,7 +170,6 @@ export default function AdminProducts() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase())).map((p) => {
             const discount = calculateDiscount(p.price, p.sale_price);
-            // Smart Image Fallback Logic
             const displayImg = p.image_url || (p.gallery && p.gallery.length > 0 ? p.gallery[0] : "https://placehold.co/100x100/eeeeee/999999?text=No+Image");
             
             return (
@@ -253,12 +257,22 @@ export default function AdminProducts() {
                     <input required className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={form.weight} onChange={e=>setForm({...form, weight: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Category</label>
-                    <select className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={form.category} onChange={e=>setForm({...form, category: e.target.value})}>
-                      <option>Premium Combo</option>
-                      <option>Daily Use</option>
-                      <option>Gift Box</option>
-                    </select>
+                    {/* Dynamic Category Input Box that allows custom typing to ADD a category, or picking existing ones */}
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Category (Type New or Pick below)</label>
+                    <input 
+                      required 
+                      list="existing-categories"
+                      placeholder="e.g. Almonds, Walnuts"
+                      className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" 
+                      value={form.category} 
+                      onChange={e=>setForm({...form, category: e.target.value})} 
+                    />
+                    <datalist id="existing-categories">
+                      {existingCategories.map((c, i) => <option key={i} value={c} />)}
+                      <option value="Premium Combo" />
+                      <option value="Daily Use" />
+                      <option value="Gift Box" />
+                    </datalist>
                   </div>
                 </div>
 
