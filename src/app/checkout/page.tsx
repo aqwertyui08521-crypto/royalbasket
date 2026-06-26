@@ -11,14 +11,15 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState({ name: "", phone: "", room: "", village: "", locality: "", pincode: "" });
   const [upi, setUpi] = useState({ phonepe: "", paytm: "", generic: "" });
   
-  // পেমেন্ট সিলেকশন এবং প্রোডাক্টের দাম
   const [selectedPayment, setSelectedPayment] = useState("");
-  const [amount, setAmount] = useState(2547); 
+  const [amount, setAmount] = useState(0); 
 
   useEffect(() => {
+    // ১. অ্যাড্রেস লোড করা হচ্ছে
     const saved = localStorage.getItem("saved_address");
     if (saved) { setAddress(JSON.parse(saved)); setStep(2); }
     
+    // ২. অ্যাডমিন প্যানেল থেকে UPI আনা হচ্ছে
     supabase.from("store_settings").select("*").eq("id", 1).single().then(({data}) => {
        if(data) setUpi({ 
          phonepe: data.phonepe_upi || "", 
@@ -26,6 +27,23 @@ export default function CheckoutPage() {
          generic: data.qr_code_url || "" 
        });
     });
+
+    // ৩. কার্ট থেকে ডায়নামিক প্রাইস হিসাব করা হচ্ছে
+    const cartData = localStorage.getItem("cart");
+    if (cartData) {
+      try {
+        const items = JSON.parse(cartData);
+        let total = 0;
+        items.forEach((item: any) => {
+          const itemPrice = Number(item.price || 0); // প্রোডাক্টের দাম
+          const itemQty = Number(item.quantity || 1); // কয়টা প্রোডাক্ট নিয়েছে
+          total += (itemPrice * itemQty);
+        });
+        setAmount(total); // অটোমেটিক টোটাল সেট হয়ে যাবে
+      } catch (error) {
+        console.error("Cart price calculation error");
+      }
+    }
   }, []);
 
   const saveAddress = () => { 
@@ -34,9 +52,9 @@ export default function CheckoutPage() {
     setStep(2); 
   };
 
-  // Place Order-এ ক্লিক করলে যা হবে
   const handlePlaceOrder = () => {
     if (!selectedPayment) return alert("Please select a payment option first.");
+    if (amount === 0) return alert("Your cart is empty!");
     
     let upiId = "";
     if (selectedPayment === "phonepe") upiId = upi.phonepe;
@@ -44,7 +62,7 @@ export default function CheckoutPage() {
     if (selectedPayment === "generic") upiId = upi.generic;
 
     if (upiId) {
-      // am=${amount}.00 যুক্ত করা হয়েছে যাতে অ্যাপে অটোমেটিক প্রাইস বসে যায়
+      // ডায়নামিক প্রাইস am=${amount}.00 দিয়ে পাঠানো হচ্ছে
       const upiLink = `upi://pay?pa=${upiId}&pn=RoyalBasket&am=${amount}.00&cu=INR`;
       window.location.href = upiLink;
     }
