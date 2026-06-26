@@ -10,12 +10,15 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [address, setAddress] = useState({ name: "", phone: "", room: "", village: "", locality: "", pincode: "" });
   const [upi, setUpi] = useState({ phonepe: "", paytm: "", generic: "" });
+  
+  // পেমেন্ট সিলেকশন এবং প্রোডাক্টের দাম
+  const [selectedPayment, setSelectedPayment] = useState("");
+  const [amount, setAmount] = useState(2547); 
 
   useEffect(() => {
     const saved = localStorage.getItem("saved_address");
     if (saved) { setAddress(JSON.parse(saved)); setStep(2); }
     
-    // ডাটাবেস থেকে সঠিক কলামের নাম ধরে ডেটা আনা হচ্ছে
     supabase.from("store_settings").select("*").eq("id", 1).single().then(({data}) => {
        if(data) setUpi({ 
          phonepe: data.phonepe_upi || "", 
@@ -31,8 +34,24 @@ export default function CheckoutPage() {
     setStep(2); 
   };
 
+  // Place Order-এ ক্লিক করলে যা হবে
+  const handlePlaceOrder = () => {
+    if (!selectedPayment) return alert("Please select a payment option first.");
+    
+    let upiId = "";
+    if (selectedPayment === "phonepe") upiId = upi.phonepe;
+    if (selectedPayment === "paytm") upiId = upi.paytm;
+    if (selectedPayment === "generic") upiId = upi.generic;
+
+    if (upiId) {
+      // am=${amount}.00 যুক্ত করা হয়েছে যাতে অ্যাপে অটোমেটিক প্রাইস বসে যায়
+      const upiLink = `upi://pay?pa=${upiId}&pn=RoyalBasket&am=${amount}.00&cu=INR`;
+      window.location.href = upiLink;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 font-sans text-black pb-20">
+    <div className="min-h-screen bg-gray-50 p-4 font-sans text-black pb-24">
       {step === 1 ? (
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200">
           <h1 className="text-xl font-black mb-6 uppercase">Delivery Address</h1>
@@ -59,37 +78,42 @@ export default function CheckoutPage() {
           
           <h2 className="text-xs font-black uppercase text-gray-500 px-2 mt-4">Payment Options</h2>
 
+          {/* PhonePe */}
           {upi.phonepe && (
-            <a href={`upi://pay?pa=${upi.phonepe}&pn=RoyalBasket&cu=INR`} className="bg-white p-4 rounded-[1.5rem] shadow-sm border border-gray-200 flex items-center gap-4 active:scale-95 transition-transform">
-              <div className="w-12 h-12 bg-[#5E2B97] rounded-xl flex items-center justify-center text-white font-black text-xl">पे</div>
-              <div>
-                <p className="font-black text-lg">PhonePe</p>
-                <p className="text-[10px] font-bold text-gray-500">Pay via PhonePe app</p>
+            <div onClick={() => setSelectedPayment('phonepe')} className={`bg-white p-4 rounded-[1.5rem] shadow-sm border-2 cursor-pointer flex items-center justify-between transition-all ${selectedPayment === 'phonepe' ? 'border-[#5C3A21] bg-[#FDFBF9]' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#5E2B97] rounded-xl flex items-center justify-center text-white font-black text-xl">पे</div>
+                <div>
+                  <p className="font-black text-lg">PhonePe</p>
+                  <p className="text-[10px] font-bold text-gray-500">Pay via PhonePe app</p>
+                </div>
               </div>
-            </a>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPayment === 'phonepe' ? 'border-[#5C3A21]' : 'border-gray-300'}`}>
+                {selectedPayment === 'phonepe' && <div className="w-2.5 h-2.5 bg-[#5C3A21] rounded-full"></div>}
+              </div>
+            </div>
           )}
 
+          {/* Paytm */}
           {upi.paytm && (
-            <a href={`upi://pay?pa=${upi.paytm}&pn=RoyalBasket&cu=INR`} className="bg-white p-4 rounded-[1.5rem] shadow-sm border border-gray-200 flex items-center gap-4 active:scale-95 transition-transform">
-              <div className="w-12 h-12 bg-[#002970] rounded-xl flex items-center justify-center text-white font-black text-sm">Paytm</div>
-              <div>
-                <p className="font-black text-lg">Paytm</p>
-                <p className="text-[10px] font-bold text-gray-500">Pay via Paytm app</p>
+            <div onClick={() => setSelectedPayment('paytm')} className={`bg-white p-4 rounded-[1.5rem] shadow-sm border-2 cursor-pointer flex items-center justify-between transition-all ${selectedPayment === 'paytm' ? 'border-[#5C3A21] bg-[#FDFBF9]' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#002970] rounded-xl flex items-center justify-center text-white font-black text-sm">Paytm</div>
+                <div>
+                  <p className="font-black text-lg">Paytm</p>
+                  <p className="text-[10px] font-bold text-gray-500">Pay via Paytm app</p>
+                </div>
               </div>
-            </a>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPayment === 'paytm' ? 'border-[#5C3A21]' : 'border-gray-300'}`}>
+                {selectedPayment === 'paytm' && <div className="w-2.5 h-2.5 bg-[#5C3A21] rounded-full"></div>}
+              </div>
+            </div>
           )}
 
-          {upi.generic && (
-            <a href={`upi://pay?pa=${upi.generic}&pn=RoyalBasket&cu=INR`} className="bg-white p-4 rounded-[1.5rem] shadow-sm border border-gray-200 flex items-center gap-4 active:scale-95 transition-transform">
-              <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white font-black text-sm">UPI</div>
-              <div>
-                <p className="font-black text-lg">Any UPI App</p>
-                <p className="text-[10px] font-bold text-gray-500">GPay, BHIM, Cred, etc.</p>
-              </div>
-            </a>
-          )}
-
-          <button className="w-full bg-[#5C3A21] text-white py-5 rounded-2xl font-black text-lg uppercase shadow-lg mt-6">Place Order</button>
+          {/* Place Order Button */}
+          <button onClick={handlePlaceOrder} className="w-full bg-[#5C3A21] text-white py-5 rounded-2xl font-black text-lg uppercase shadow-lg mt-6 active:scale-95 transition-transform">
+            Place Order ₹{amount}
+          </button>
         </div>
       )}
     </div>
