@@ -87,6 +87,9 @@ export default function AdminProducts() {
     e.preventDefault();
     setLoading(true);
     
+    // Force main image if empty but gallery has images
+    const finalImageUrl = form.image_url || (form.gallery && form.gallery.length > 0 ? form.gallery[0] : "");
+
     const productData = {
       name: form.name,
       description: form.description,
@@ -94,7 +97,7 @@ export default function AdminProducts() {
       sale_price: Number(form.sale_price) > 0 ? Number(form.sale_price) : Number(form.price),
       category: form.category,
       weight: form.weight,
-      image_url: form.image_url,
+      image_url: finalImageUrl,
       gallery: form.gallery,
       in_stock: form.in_stock,
       is_active: form.is_active
@@ -113,10 +116,8 @@ export default function AdminProducts() {
     setLoading(false);
 
     if (saveError) {
-      // যদি ডাটাবেস সেভ করতে না দেয়, তবে স্ক্রিনে বড় করে এরর দেখাবে
       alert("❌ Database Error: " + saveError.message);
     } else {
-      alert("✅ Product saved successfully!");
       setIsModalOpen(false);
       fetchProducts();
     }
@@ -136,11 +137,8 @@ export default function AdminProducts() {
   const deleteProduct = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) {
-        alert("Delete Error: " + error.message);
-      } else {
-        fetchProducts();
-      }
+      if (error) alert("Delete Error: " + error.message);
+      else fetchProducts();
     }
   };
 
@@ -167,10 +165,13 @@ export default function AdminProducts() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase())).map((p) => {
             const discount = calculateDiscount(p.price, p.sale_price);
+            // Smart Image Fallback Logic
+            const displayImg = p.image_url || (p.gallery && p.gallery.length > 0 ? p.gallery[0] : "https://placehold.co/100x100/eeeeee/999999?text=No+Image");
+            
             return (
               <div key={p.id} className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex gap-4 relative ${!p.is_active ? 'opacity-50' : ''}`}>
                 {!p.is_active && <span className="absolute top-2 right-2 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded">HIDDEN</span>}
-                <img src={p.image_url || 'https://via.placeholder.com/100'} className="w-20 h-20 rounded-xl object-cover bg-gray-50 border border-gray-100" />
+                <img src={displayImg} className="w-20 h-20 rounded-xl object-cover bg-gray-50 border border-gray-100" />
                 <div className="flex-1">
                   <h3 className="font-bold text-sm text-gray-800 leading-tight">{p.name}</h3>
                   <p className="text-[10px] text-gray-500 font-bold mt-1">{p.weight} • {p.category}</p>
@@ -199,7 +200,6 @@ export default function AdminProducts() {
             </div>
             
             <div className="p-5 overflow-y-auto space-y-5">
-              
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">1. Upload from Gallery</label>
                 <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" id="gallery-upload" />
