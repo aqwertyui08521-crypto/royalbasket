@@ -14,11 +14,9 @@ export default function CheckoutPage() {
   const [totals, setTotals] = useState({ itemTotal: 0, saved: 0, toPay: 0, totalQty: 0 });
 
   useEffect(() => {
-    // ১. অ্যাড্রেস লোড
     const saved = localStorage.getItem("saved_address");
     if (saved) { setAddress(JSON.parse(saved)); setStep(2); }
     
-    // ২. কার্ট এবং প্রোডাক্ট লোড
     const loadCart = async () => {
       try {
         const savedCart = localStorage.getItem("royal_cart");
@@ -28,9 +26,7 @@ export default function CheckoutPage() {
           
           if (products) {
             let tempCart: any[] = [];
-            let tOld = 0;
-            let tNew = 0;
-            let tQty = 0;
+            let tOld = 0, tNew = 0, tQty = 0;
 
             products.forEach((p: any) => {
               const qty = cartItems[p.id];
@@ -55,6 +51,55 @@ export default function CheckoutPage() {
     loadCart();
   }, []);
 
+  // নতুন ফাংশন: কার্টের আইটেম বাড়ানো, কমানো বা রিমুভ করার জন্য
+  const updateCartItem = (id: string, action: 'increase' | 'decrease' | 'remove') => {
+    let savedCart = JSON.parse(localStorage.getItem("royal_cart") || "{}");
+    
+    if (action === 'increase') {
+      savedCart[id] = (savedCart[id] || 0) + 1;
+    } else if (action === 'decrease') {
+      if (savedCart[id] > 1) {
+        savedCart[id] -= 1;
+      } else {
+        delete savedCart[id];
+      }
+    } else if (action === 'remove') {
+      delete savedCart[id];
+    }
+
+    // লোকাল স্টোরেজ আপডেট করা
+    localStorage.setItem("royal_cart", JSON.stringify(savedCart));
+    window.dispatchEvent(new Event("storage"));
+
+    // স্ক্রিনের ডেটা এবং বিল আপডেট করা
+    let tempCart = [...cartData];
+    if (action === 'increase') {
+      const item = tempCart.find(i => i.id === id);
+      if(item) item.qty += 1;
+    } else if (action === 'decrease') {
+      const item = tempCart.find(i => i.id === id);
+      if(item) {
+        item.qty -= 1;
+        if(item.qty <= 0) tempCart = tempCart.filter(i => i.id !== id);
+      }
+    } else if (action === 'remove') {
+      tempCart = tempCart.filter(i => i.id !== id);
+    }
+
+    setCartData(tempCart);
+
+    let tOld = 0, tNew = 0, tQty = 0;
+    tempCart.forEach(p => {
+      const qty = p.qty;
+      const oldP = Number(p.price || 0);
+      const newP = Number(p.sale_price || p.price || 0);
+      tOld += (oldP * qty);
+      tNew += (newP * qty);
+      tQty += qty;
+    });
+    setTotals({ itemTotal: tOld, saved: (tOld - tNew), toPay: tNew, totalQty: tQty });
+  };
+
   const saveAddress = () => { 
     if(!address.name || !address.phone) return alert("Please fill required details");
     localStorage.setItem("saved_address", JSON.stringify(address)); 
@@ -63,7 +108,6 @@ export default function CheckoutPage() {
 
   const handleProceedToPayment = () => {
     if (totals.toPay === 0) return alert("Your cart is empty!");
-    // টোটাল অ্যামাউন্ট পেমেন্ট পেজের জন্য সেভ করে রাখছি
     localStorage.setItem("checkout_total", totals.toPay.toString());
     localStorage.setItem("checkout_savings", totals.saved.toString());
     router.push('/payment');
@@ -91,7 +135,6 @@ export default function CheckoutPage() {
         </div>
       ) : (
         <div>
-          {/* Header */}
           <div className="bg-[#F5F5F5] sticky top-0 z-10 px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button onClick={() => router.back()} className="p-1"><span className="text-xl font-bold">←</span></button>
@@ -103,7 +146,6 @@ export default function CheckoutPage() {
           </div>
 
           <div className="px-4 space-y-4 mt-2">
-            {/* Address Card */}
             <div className="bg-white p-4 rounded-3xl shadow-sm flex items-start justify-between">
               <div className="flex gap-3">
                 <div className="mt-1 w-6 h-6 rounded-full bg-[#7A401A]/10 flex items-center justify-center text-[#7A401A] text-xs">📍</div>
@@ -119,7 +161,6 @@ export default function CheckoutPage() {
               <button onClick={() => setStep(1)} className="text-xs font-bold text-[#7A401A] uppercase tracking-wide">Change</button>
             </div>
 
-            {/* Items in Cart */}
             <div className="bg-white p-4 rounded-3xl shadow-sm">
               <h2 className="font-extrabold text-sm mb-4">Items in cart</h2>
               <div className="space-y-4">
@@ -132,23 +173,24 @@ export default function CheckoutPage() {
                       <h4 className="font-extrabold text-sm mt-1">₹{item.sale_price || item.price}</h4>
                     </div>
                     <div className="flex flex-col items-end justify-between">
+                      {/* + এবং - বাটন ফাংশনাল করা হয়েছে */}
                       <div className="bg-[#5C3A21] text-white flex items-center rounded-lg px-2 py-1 gap-3">
-                        <span className="text-sm font-bold px-1">-</span>
+                        <button onClick={() => updateCartItem(item.id, 'decrease')} className="text-sm font-bold px-1 active:scale-90">-</button>
                         <span className="text-xs font-bold">{item.qty}</span>
-                        <span className="text-sm font-bold px-1">+</span>
+                        <button onClick={() => updateCartItem(item.id, 'increase')} className="text-sm font-bold px-1 active:scale-90">+</button>
                       </div>
-                      <button className="text-[10px] text-red-500 font-bold mt-2">Remove</button>
+                      {/* Remove বাটন ফাংশনাল করা হয়েছে */}
+                      <button onClick={() => updateCartItem(item.id, 'remove')} className="text-[10px] text-red-500 font-bold mt-2">Remove</button>
                     </div>
                   </div>
                 ))}
+                {cartData.length === 0 && <p className="text-sm text-center text-gray-500 py-4">Your cart is empty</p>}
               </div>
             </div>
 
-            {/* Offers Available */}
             <div className="bg-white p-4 rounded-3xl shadow-sm">
               <h2 className="font-extrabold text-sm mb-3">Offers Available</h2>
               <div className="space-y-3">
-                {/* Offer 1: Buy 3 Get 1 */}
                 <div className="border border-gray-200 rounded-2xl p-3 flex justify-between items-center">
                   <div>
                     <h3 className="font-bold text-sm text-gray-800">Buy 3 Get 1 Free</h3>
@@ -161,7 +203,6 @@ export default function CheckoutPage() {
                   </span>
                 </div>
                 
-                {/* Offer 2: Buy 5 Get 2 */}
                 <div className="border border-gray-200 rounded-2xl p-3 flex justify-between items-center">
                   <div>
                     <h3 className="font-bold text-sm text-gray-800">Buy 5 Get 2 Free</h3>
@@ -176,7 +217,6 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Bill Details */}
             <div className="bg-white p-4 rounded-3xl shadow-sm">
               <h2 className="font-extrabold text-sm mb-4">Bill Details</h2>
               <div className="space-y-2 text-xs font-medium text-gray-600">
@@ -189,7 +229,6 @@ export default function CheckoutPage() {
                 <span>To Pay</span><span>₹{totals.toPay}</span>
               </div>
               
-              {/* Saving Banner */}
               {totals.saved > 0 && (
                 <div className="bg-[#F8EFE9] text-[#7A401A] text-[11px] font-bold text-center py-2.5 rounded-xl mt-4 flex items-center justify-center gap-2">
                   <span>🏷️</span> You saved ₹{totals.saved} on this order
@@ -198,7 +237,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Sticky Footer */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 z-20">
             <button onClick={handleProceedToPayment} className="w-full bg-[#5C3A21] text-white h-14 rounded-full font-bold flex items-center justify-between px-6 shadow-lg shadow-[#5C3A21]/30 active:scale-[0.98] transition-transform">
               <span className="text-lg">₹{totals.toPay}</span>
