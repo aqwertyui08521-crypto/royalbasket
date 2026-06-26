@@ -15,11 +15,11 @@ export default function CheckoutPage() {
   const [amount, setAmount] = useState(0); 
 
   useEffect(() => {
-    // ১. অ্যাড্রেস লোড করা হচ্ছে
+    // 1. Load Saved Address
     const saved = localStorage.getItem("saved_address");
     if (saved) { setAddress(JSON.parse(saved)); setStep(2); }
     
-    // ২. অ্যাডমিন প্যানেল থেকে UPI আনা হচ্ছে
+    // 2. Load UPI Settings
     supabase.from("store_settings").select("*").eq("id", 1).single().then(({data}) => {
        if(data) setUpi({ 
          phonepe: data.phonepe_upi || "", 
@@ -28,21 +28,30 @@ export default function CheckoutPage() {
        });
     });
 
-    // ৩. কার্ট থেকে ডায়নামিক প্রাইস হিসাব করা হচ্ছে
-    const cartData = localStorage.getItem("cart");
-    if (cartData) {
-      try {
+    // 3. Robust Cart Price Calculation (₹ চিহ্ন এবং অন্যান্য সমস্যা ফিক্স)
+    try {
+      const cartData = localStorage.getItem("cart") || localStorage.getItem("cartItems");
+      if (cartData) {
         const items = JSON.parse(cartData);
-        let total = 0;
+        let calculatedTotal = 0;
+        
         items.forEach((item: any) => {
-          const itemPrice = Number(item.price || 0); // প্রোডাক্টের দাম
-          const itemQty = Number(item.quantity || 1); // কয়টা প্রোডাক্ট নিয়েছে
-          total += (itemPrice * itemQty);
+          // দামের আগে থাকা ₹ বা কমা মুছে শুধু সংখ্যাটা নেওয়া হচ্ছে
+          const rawPrice = String(item.price || item.sale_price || item.price_old || 0).replace(/[^0-9.]/g, '');
+          const rawQty = String(item.quantity || item.qty || 1).replace(/[^0-9.]/g, '');
+          calculatedTotal += (Number(rawPrice) * Number(rawQty));
         });
-        setAmount(total); // অটোমেটিক টোটাল সেট হয়ে যাবে
-      } catch (error) {
-        console.error("Cart price calculation error");
+
+        // যদি আপনার শপিং কার্ট আগে থেকেই "cartTotal" নামে টোটাল সেভ করে রাখে
+        const savedTotal = localStorage.getItem("cartTotal") || localStorage.getItem("grandTotal");
+        if (savedTotal) {
+           setAmount(Number(String(savedTotal).replace(/[^0-9.]/g, '')));
+        } else {
+           setAmount(calculatedTotal);
+        }
       }
+    } catch (error) {
+      console.error("Cart price calculation error");
     }
   }, []);
 
@@ -54,7 +63,7 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = () => {
     if (!selectedPayment) return alert("Please select a payment option first.");
-    if (amount === 0) return alert("Your cart is empty!");
+    if (amount === 0) return alert("Error! Cart total is ₹0. Please go back and add items again.");
     
     let upiId = "";
     if (selectedPayment === "phonepe") upiId = upi.phonepe;
@@ -62,7 +71,6 @@ export default function CheckoutPage() {
     if (selectedPayment === "generic") upiId = upi.generic;
 
     if (upiId) {
-      // ডায়নামিক প্রাইস am=${amount}.00 দিয়ে পাঠানো হচ্ছে
       const upiLink = `upi://pay?pa=${upiId}&pn=RoyalBasket&am=${amount}.00&cu=INR`;
       window.location.href = upiLink;
     }
@@ -77,7 +85,7 @@ export default function CheckoutPage() {
             {["name", "phone", "room", "village", "locality", "pincode"].map((f) => (
               <input key={f} placeholder={f.toUpperCase()} className="w-full bg-gray-100 p-4 rounded-xl font-bold border-none outline-none focus:ring-2 focus:ring-[#5C3A21]" value={address[f as keyof typeof address]} onChange={(e) => setAddress({...address, [f]: e.target.value})} />
             ))}
-            <button onClick={saveAddress} className="w-full bg-black text-white py-4 rounded-xl font-black uppercase">Continue</button>
+            <button onClick={saveAddress} className="w-full bg-[#5C3A21] text-white py-4 rounded-xl font-black uppercase">Continue</button>
           </div>
         </div>
       ) : (
@@ -128,9 +136,25 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/* Generic UPI */}
+          {upi.generic && (
+            <div onClick={() => setSelectedPayment('generic')} className={`bg-white p-4 rounded-[1.5rem] shadow-sm border-2 cursor-pointer flex items-center justify-between transition-all ${selectedPayment === 'generic' ? 'border-[#5C3A21] bg-[#FDFBF9]' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white font-black text-sm">UPI</div>
+                <div>
+                  <p className="font-black text-lg">Any UPI App</p>
+                  <p className="text-[10px] font-bold text-gray-500">GPay, BHIM, Cred, etc.</p>
+                </div>
+              </div>
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPayment === 'generic' ? 'border-[#5C3A21]' : 'border-gray-300'}`}>
+                {selectedPayment === 'generic' && <div className="w-2.5 h-2.5 bg-[#5C3A21] rounded-full"></div>}
+              </div>
+            </div>
+          )}
+
           {/* Place Order Button */}
           <button onClick={handlePlaceOrder} className="w-full bg-[#5C3A21] text-white py-5 rounded-2xl font-black text-lg uppercase shadow-lg mt-6 active:scale-95 transition-transform">
-            Place Order ₹{amount}
+            Place Order {amount > 0 ? `₹${amount}` : ''}
           </button>
         </div>
       )}
