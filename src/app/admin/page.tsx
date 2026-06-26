@@ -9,13 +9,27 @@ export default function Admin() {
 
   useEffect(() => {
     supabase.from("store_settings").select("*").eq("id", 1).single().then(({data}) => {
-       if(data) setUpi({ phonepe: data.phonepe || "", paytm: data.paytm || "", generic: data.upi_generic || "" });
+       if(data) setUpi({ 
+         phonepe: data.phonepe_upi || "", 
+         paytm: data.paytm_upi || "", 
+         generic: data.qr_code_url || "" 
+       });
     });
   }, []);
 
   const save = async () => {
-    await supabase.from("store_settings").upsert({ id: 1, phonepe: upi.phonepe, paytm: upi.paytm, upi_generic: upi.generic });
-    alert("Payment Options Saved Successfully!");
+    const { error } = await supabase.from("store_settings").upsert({ 
+      id: 1, 
+      phonepe_upi: upi.phonepe, 
+      paytm_upi: upi.paytm, 
+      qr_code_url: upi.generic 
+    });
+    
+    if (error) {
+      alert("Error: " + error.message);
+    } else {
+      alert("Payment Options Saved Successfully!");
+    }
   };
 
   return (

@@ -15,9 +15,13 @@ export default function CheckoutPage() {
     const saved = localStorage.getItem("saved_address");
     if (saved) { setAddress(JSON.parse(saved)); setStep(2); }
     
-    // অ্যাডমিন থেকে সব পেমেন্ট অপশন আনছি
+    // ডাটাবেস থেকে সঠিক কলামের নাম ধরে ডেটা আনা হচ্ছে
     supabase.from("store_settings").select("*").eq("id", 1).single().then(({data}) => {
-       if(data) setUpi({ phonepe: data.phonepe || "", paytm: data.paytm || "", generic: data.upi_generic || "" });
+       if(data) setUpi({ 
+         phonepe: data.phonepe_upi || "", 
+         paytm: data.paytm_upi || "", 
+         generic: data.qr_code_url || "" 
+       });
     });
   }, []);
 
@@ -55,7 +59,6 @@ export default function CheckoutPage() {
           
           <h2 className="text-xs font-black uppercase text-gray-500 px-2 mt-4">Payment Options</h2>
 
-          {/* PhonePe Option */}
           {upi.phonepe && (
             <a href={`upi://pay?pa=${upi.phonepe}&pn=RoyalBasket&cu=INR`} className="bg-white p-4 rounded-[1.5rem] shadow-sm border border-gray-200 flex items-center gap-4 active:scale-95 transition-transform">
               <div className="w-12 h-12 bg-[#5E2B97] rounded-xl flex items-center justify-center text-white font-black text-xl">पे</div>
@@ -66,7 +69,6 @@ export default function CheckoutPage() {
             </a>
           )}
 
-          {/* Paytm Option */}
           {upi.paytm && (
             <a href={`upi://pay?pa=${upi.paytm}&pn=RoyalBasket&cu=INR`} className="bg-white p-4 rounded-[1.5rem] shadow-sm border border-gray-200 flex items-center gap-4 active:scale-95 transition-transform">
               <div className="w-12 h-12 bg-[#002970] rounded-xl flex items-center justify-center text-white font-black text-sm">Paytm</div>
@@ -77,7 +79,6 @@ export default function CheckoutPage() {
             </a>
           )}
 
-          {/* Any UPI Option (Gpay, Bhim, etc) */}
           {upi.generic && (
             <a href={`upi://pay?pa=${upi.generic}&pn=RoyalBasket&cu=INR`} className="bg-white p-4 rounded-[1.5rem] shadow-sm border border-gray-200 flex items-center gap-4 active:scale-95 transition-transform">
               <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white font-black text-sm">UPI</div>
