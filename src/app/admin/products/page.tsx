@@ -6,11 +6,13 @@ const supabase = createClient("https://npzfzlkvdxweiaewnnem.supabase.co", "sb_pu
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
+  const [banners, setBanners] = useState<any[]>([]);
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [tempUrl, setTempUrl] = useState("");
 
   const [form, setForm] = useState({
@@ -22,6 +24,7 @@ export default function AdminProducts() {
 
   useEffect(() => {
     fetchProducts();
+    fetchBanners();
   }, []);
 
   const fetchProducts = async () => {
@@ -31,6 +34,46 @@ export default function AdminProducts() {
       setProducts(data);
       const cats = Array.from(new Set(data.map((p: any) => p.category).filter(Boolean)));
       setExistingCategories(cats as string[]);
+    }
+  };
+
+  // ব্যানার ডাটাবেস থেকে আনার ফাংশন
+  const fetchBanners = async () => {
+    const { data } = await supabase.from("banners").select("*").order("id", { ascending: false });
+    if (data) setBanners(data);
+  };
+
+  // ব্যানার আপলোড করার ফাংশন
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingBanner(true);
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `banner-${Math.random()}.${fileExt}`;
+      const filePath = `banners/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
+      if (uploadError) {
+        alert("Upload Error: " + uploadError.message);
+        return;
+      }
+
+      const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+      await supabase.from("banners").insert([{ image_url: data.publicUrl }]);
+      fetchBanners();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
+  const deleteBanner = async (id: number) => {
+    if (window.confirm("Are you sure you want to delete this banner?")) {
+      await supabase.from("banners").delete().eq("id", id);
+      fetchBanners();
     }
   };
 
@@ -55,7 +98,6 @@ export default function AdminProducts() {
         const filePath = `product-images/${fileName}`;
 
         const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
-        
         if (uploadError) {
           alert("Image Upload Error: " + uploadError.message);
           setUploading(false);
@@ -66,7 +108,6 @@ export default function AdminProducts() {
         if (!mainImage) mainImage = data.publicUrl;
         newGallery.push(data.publicUrl);
       }
-
       setForm({ ...form, image_url: mainImage, gallery: newGallery });
     } catch (error) {
       console.error(error);
@@ -153,6 +194,33 @@ export default function AdminProducts() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 font-sans text-gray-900 pb-20">
       <div className="max-w-6xl mx-auto">
+        
+        {/* NEW: BANNER UPLOAD SECTION */}
+        <div className="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-100">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-black text-[#5C3A21]">Home Page Banners</h2>
+            <div className="relative">
+              <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" id="banner-upload" />
+              <label htmlFor="banner-upload" className="bg-[#5C3A21] text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md cursor-pointer active:scale-95 transition-transform inline-block">
+                {uploadingBanner ? "Uploading..." : "+ Upload Banner"}
+              </label>
+            </div>
+          </div>
+          {banners.length > 0 ? (
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {banners.map((b) => (
+                <div key={b.id} className="relative min-w-[120px] w-[120px] h-[60px] rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                  <img src={b.image_url} className="w-full h-full object-cover" />
+                  <button onClick={() => deleteBanner(b.id)} className="absolute top-1 right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-600">✕</button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 font-bold bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">No banners uploaded. Default theme banner is showing on homepage.</p>
+          )}
+        </div>
+
+        {/* EXISTING PRODUCTS LIST SECTION */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-black">Products List</h1>
           <button onClick={() => {
@@ -198,6 +266,7 @@ export default function AdminProducts() {
         </div>
       </div>
 
+      {/* MODAL FORM IS 100% SAME AS BEFORE */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center sm:p-4">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col">
@@ -260,7 +329,6 @@ export default function AdminProducts() {
                   </div>
                 </div>
 
-                {/* NEW: RATING AND REVIEWS SECTION */}
                 <div className="grid grid-cols-2 gap-3 bg-yellow-50 p-3 rounded-xl border border-yellow-100">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Rating (Out of 5)</label>

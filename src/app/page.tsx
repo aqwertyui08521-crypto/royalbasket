@@ -15,19 +15,37 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [qty, setQty] = useState(1);
 
+  // ব্যানারের জন্য স্টেট
+  const [banners, setBanners] = useState<any[]>([]);
+  const [currentBanner, setCurrentBanner] = useState(0);
+
   useEffect(() => {
-    const fetchProducts = async () => {
-      const { data } = await supabase.from("products").select("*").eq("is_active", true).order("id", { ascending: false });
-      if (data) {
-        setProducts(data);
-        // Get unique categories dynamically from products table
-        const uniqueCats = ["All", ...Array.from(new Set(data.map((p: any) => p.category).filter(Boolean)))];
+    const fetchData = async () => {
+      // প্রোডাক্ট আনা হচ্ছে
+      const { data: prodData } = await supabase.from("products").select("*").eq("is_active", true).order("id", { ascending: false });
+      if (prodData) {
+        setProducts(prodData);
+        const uniqueCats = ["All", ...Array.from(new Set(prodData.map((p: any) => p.category).filter(Boolean)))];
         setCategories(uniqueCats as string[]);
       }
+      
+      // ব্যানার আনা হচ্ছে
+      const { data: bannerData } = await supabase.from("banners").select("*").eq("is_active", true).order("id", { ascending: false });
+      if (bannerData) setBanners(bannerData);
+
       setLoading(false);
     };
-    fetchProducts();
+    fetchData();
   }, []);
+
+  // ১ সেকেন্ড (১০০০ মিলি-সেকেন্ড) পর পর স্লাইড হওয়ার লজিক
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentBanner((prev) => (prev + 1) % banners.length);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [banners]);
 
   const calculateDiscount = (mrp: number, sale: number) => {
     if (!mrp || !sale || mrp <= sale) return 0;
@@ -35,7 +53,7 @@ export default function HomePage() {
   };
 
   const handleOpenBottomSheet = (e: React.MouseEvent, p: any) => {
-    e.stopPropagation(); // Stop navigation to details page when clicking ADD TO CART
+    e.stopPropagation(); 
     setSelectedProduct(p);
     setQty(1);
   };
@@ -50,7 +68,6 @@ export default function HomePage() {
     router.push('/checkout');
   };
 
-  // Filter products based on selected category
   const filteredProducts = selectedCategory === "All" 
     ? products 
     : products.filter(p => p.category === selectedCategory);
@@ -66,14 +83,28 @@ export default function HomePage() {
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-lg">🔍</div>
         </div>
         
-        <div className="bg-gradient-to-r from-[#5C3A21] to-[#8c5e3c] rounded-2xl p-5 text-white relative z-10 shadow-lg shadow-[#5C3A21]/30">
-          <p className="text-[10px] font-bold tracking-widest text-[#EAD9C9] uppercase mb-1">Premium Dry Fruits</p>
-          <h2 className="text-xl font-black mb-1">Mega Dryfruit Sale</h2>
-          <p className="text-xs font-medium opacity-90 flex items-center gap-1"><span className="text-lg">🚚</span> Free Delivery on all orders</p>
-        </div>
+        {/* Dynamic Sliding Banners */}
+        {banners.length > 0 ? (
+          <div className="relative w-full h-32 rounded-2xl overflow-hidden shadow-lg shadow-[#5C3A21]/20 z-10">
+            {banners.map((b, i) => (
+              <img
+                key={b.id}
+                src={b.image_url}
+                alt="Promo Banner"
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === currentBanner ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-[#5C3A21] to-[#8c5e3c] rounded-2xl p-5 text-white relative z-10 shadow-lg shadow-[#5C3A21]/30">
+            <p className="text-[10px] font-bold tracking-widest text-[#EAD9C9] uppercase mb-1">Premium Dry Fruits</p>
+            <h2 className="text-xl font-black mb-1">Mega Dryfruit Sale</h2>
+            <p className="text-xs font-medium opacity-90 flex items-center gap-1"><span className="text-lg">🚚</span> Free Delivery on all orders</p>
+          </div>
+        )}
       </div>
 
-      {/* Categories Section (Horizontal Scroll matching original theme design) */}
+      {/* Categories Section */}
       <div className="px-4 -mt-4 relative z-20">
         <div className="bg-white p-3 rounded-2xl shadow-sm flex gap-3 overflow-x-auto scrollbar-hide border border-gray-100 items-center">
            {categories.map((cat, idx) => (
@@ -110,8 +141,6 @@ export default function HomePage() {
                   onClick={() => router.push(`/product/${p.id}`)}
                   className="bg-white rounded-2xl p-3 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-50 flex flex-col relative cursor-pointer active:scale-[0.99] transition-transform"
                 >
-                  
-                  {/* Tags Row */}
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-1 text-[8px] font-extrabold text-gray-700 bg-gray-50 px-1.5 py-0.5 rounded">
                       <span>🚚</span> FREE DELIVERY
@@ -119,16 +148,14 @@ export default function HomePage() {
                     {discount > 0 && <span className="text-[9px] font-black text-[#FF4B4B] bg-[#FFF0F0] px-1.5 py-0.5 rounded">{discount}% OFF</span>}
                   </div>
 
-                  {/* Image */}
                   <div className="w-full aspect-square bg-[#F8F9FA] rounded-xl mb-2 p-2 flex items-center justify-center">
                      <img src={displayImg} alt={p.name} className="w-full h-full object-cover mix-blend-multiply" />
                   </div>
 
-                  {/* Details */}
                   <div className="flex-1 flex flex-col">
                     <div className="flex items-center gap-1 mb-1">
                        <span className="bg-[#6B4423] text-white text-[8px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
-                         4.9 <span className="text-[6px]">★</span>
+                         {p.rating || 4.5} <span className="text-[6px]">★</span>
                        </span>
                     </div>
                     <h3 className="font-bold text-[11px] text-gray-800 leading-tight line-clamp-2 mb-0.5">{p.name}</h3>
