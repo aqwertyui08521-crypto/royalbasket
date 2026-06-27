@@ -37,32 +37,42 @@ export default function AdminProducts() {
     }
   };
 
-  // ব্যানার ডাটাবেস থেকে আনার ফাংশন
   const fetchBanners = async () => {
     const { data } = await supabase.from("banners").select("*").order("id", { ascending: false });
     if (data) setBanners(data);
   };
 
-  // ব্যানার আপলোড করার ফাংশন
+  // আপডেটেড ব্যানার আপলোড ফাংশন (মাল্টিপল ছবি এবং এরর অ্যালার্ট সহ)
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploadingBanner(true);
-      const file = e.target.files?.[0];
-      if (!file) return;
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `banner-${Math.random()}.${fileExt}`;
-      const filePath = `banners/${fileName}`;
+      // লুপ চালিয়ে একসাথে ৩-৪টে ব্যানার আপলোড করার লজিক
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `banner-${Math.random()}.${fileExt}`;
+        const filePath = `banners/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
-      if (uploadError) {
-        alert("Upload Error: " + uploadError.message);
-        return;
+        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
+        if (uploadError) {
+          alert("Image Upload Error: " + uploadError.message);
+          continue; // একটা ফেইল হলে পরেরটায় যাবে
+        }
+
+        const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+        
+        // ডাটাবেসে সেভ করা এবং এরর চেক করা
+        const { error: insertError } = await supabase.from("banners").insert([{ image_url: data.publicUrl }]);
+        if (insertError) {
+           alert("❌ Database Error (Banner): " + insertError.message + "\n(Please check if you run the SQL code correctly)");
+        }
       }
-
-      const { data } = supabase.storage.from('images').getPublicUrl(filePath);
-      await supabase.from("banners").insert([{ image_url: data.publicUrl }]);
+      
       fetchBanners();
+      alert("✅ Banners uploaded successfully!");
     } catch (err) {
       console.error(err);
     } finally {
@@ -195,14 +205,15 @@ export default function AdminProducts() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 font-sans text-gray-900 pb-20">
       <div className="max-w-6xl mx-auto">
         
-        {/* NEW: BANNER UPLOAD SECTION */}
+        {/* BANNER UPLOAD SECTION */}
         <div className="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-black text-[#5C3A21]">Home Page Banners</h2>
             <div className="relative">
-              <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden" id="banner-upload" />
+              {/* Added 'multiple' attribute so you can select 3-4 banners at once */}
+              <input type="file" multiple accept="image/*" onChange={handleBannerUpload} className="hidden" id="banner-upload" />
               <label htmlFor="banner-upload" className="bg-[#5C3A21] text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md cursor-pointer active:scale-95 transition-transform inline-block">
-                {uploadingBanner ? "Uploading..." : "+ Upload Banner"}
+                {uploadingBanner ? "Uploading..." : "+ Upload Banners"}
               </label>
             </div>
           </div>
@@ -266,7 +277,6 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* MODAL FORM IS 100% SAME AS BEFORE */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center sm:p-4">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col">
