@@ -86,9 +86,9 @@ export default function ProductDetails() {
           <h1 className="text-xl font-black leading-tight text-gray-800 mb-3">{product.name}</h1>
           <div className="flex items-center gap-2">
             <div className="bg-[#198754] text-white flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold shadow-sm">
-              4.4 <span className="text-[10px]">★</span>
+              {product.rating || 4.5} <span className="text-[10px]">★</span>
             </div>
-            <span className="text-xs text-gray-500 font-medium">38 Ratings & Reviews</span>
+            <span className="text-xs text-gray-500 font-medium">{product.reviews_count || 10} Ratings & Reviews</span>
           </div>
         </div>
 
@@ -204,9 +204,9 @@ export default function ProductDetails() {
            <h3 className="text-sm font-extrabold mb-4 text-gray-800">Ratings & Reviews</h3>
            <div className="flex items-center gap-6 bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-sm">
              <div className="flex flex-col items-center">
-               <span className="text-4xl font-black text-gray-800">4.4</span>
+               <span className="text-4xl font-black text-gray-800">{product.rating || 4.5}</span>
                <span className="text-[10px] text-[#198754] font-black tracking-widest mt-1">★★★★★</span>
-               <span className="text-[9px] text-gray-500 font-bold mt-1">38 Ratings</span>
+               <span className="text-[9px] text-gray-500 font-bold mt-1">{product.reviews_count || 10} Ratings</span>
              </div>
              <div className="flex-1 space-y-2">
                {[5,4,3,2,1].map((star, i) => (

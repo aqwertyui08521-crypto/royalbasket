@@ -16,7 +16,8 @@ export default function AdminProducts() {
   const [form, setForm] = useState({
     id: null, name: "", description: "", price: "", sale_price: "", 
     category: "Premium Combo", weight: "1 Kg", 
-    image_url: "", gallery: [] as string[], in_stock: true, is_active: true
+    image_url: "", gallery: [] as string[], in_stock: true, is_active: true,
+    rating: "4.5", reviews_count: "10"
   });
 
   useEffect(() => {
@@ -28,7 +29,6 @@ export default function AdminProducts() {
     if (error) console.error("Fetch Error:", error.message);
     if (data) {
       setProducts(data);
-      // Extract unique categories to help user choose easily
       const cats = Array.from(new Set(data.map((p: any) => p.category).filter(Boolean)));
       setExistingCategories(cats as string[]);
     }
@@ -105,7 +105,9 @@ export default function AdminProducts() {
       image_url: finalImageUrl,
       gallery: form.gallery,
       in_stock: form.in_stock,
-      is_active: form.is_active
+      is_active: form.is_active,
+      rating: Number(form.rating) || 4.5,
+      reviews_count: Number(form.reviews_count) || 0
     };
 
     let saveError = null;
@@ -134,7 +136,8 @@ export default function AdminProducts() {
       price: p.price || "", sale_price: p.sale_price || "", 
       category: p.category || "Premium Combo", weight: p.weight || "1 Kg", 
       image_url: p.image_url || "", gallery: p.gallery || [], 
-      in_stock: p.in_stock ?? true, is_active: p.is_active ?? true 
+      in_stock: p.in_stock ?? true, is_active: p.is_active ?? true,
+      rating: p.rating?.toString() || "4.5", reviews_count: p.reviews_count?.toString() || "10"
     });
     setIsModalOpen(true);
   };
@@ -153,7 +156,7 @@ export default function AdminProducts() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-black">Products List</h1>
           <button onClick={() => {
-              setForm({ id: null, name: "", description: "", price: "", sale_price: "", category: "Premium Combo", weight: "1 Kg", image_url: "", gallery: [], in_stock: true, is_active: true });
+              setForm({ id: null, name: "", description: "", price: "", sale_price: "", category: "Premium Combo", weight: "1 Kg", image_url: "", gallery: [], in_stock: true, is_active: true, rating: "4.5", reviews_count: "10" });
               setIsModalOpen(true);
             }} 
             className="bg-[#5C3A21] text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform"
@@ -178,7 +181,7 @@ export default function AdminProducts() {
                 <img src={displayImg} className="w-20 h-20 rounded-xl object-cover bg-gray-50 border border-gray-100" />
                 <div className="flex-1">
                   <h3 className="font-bold text-sm text-gray-800 leading-tight">{p.name}</h3>
-                  <p className="text-[10px] text-gray-500 font-bold mt-1">{p.weight} • {p.category}</p>
+                  <p className="text-[10px] text-gray-500 font-bold mt-1">{p.weight} • ★{p.rating || 4.5} ({p.reviews_count || 0})</p>
                   <div className="mt-1 flex items-center flex-wrap gap-1">
                     <span className="font-black text-[#5C3A21] text-sm">₹{p.sale_price || p.price}</span>
                     {p.sale_price && p.sale_price < p.price && <span className="text-[10px] text-gray-400 line-through ml-1">₹{p.price}</span>}
@@ -205,21 +208,13 @@ export default function AdminProducts() {
             
             <div className="p-5 overflow-y-auto space-y-5">
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">1. Upload from Gallery</label>
+                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">1. Upload Photos</label>
                 <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" id="gallery-upload" />
                 <label htmlFor="gallery-upload" className="w-full bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer active:bg-gray-50">
                   <span className="text-2xl">📸</span>
                   <span className="font-bold text-sm text-[#5C3A21] mt-1">Select Multiple Photos</span>
                   {uploading && <span className="text-xs font-bold text-blue-600 mt-1">Uploading...</span>}
                 </label>
-
-                <div className="mt-4">
-                  <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">OR 2. Paste Image Link</label>
-                  <div className="flex gap-2">
-                    <input type="text" placeholder="Paste URL here..." className="w-full bg-white border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={tempUrl} onChange={e=>setTempUrl(e.target.value)} />
-                    <button type="button" onClick={addManualUrl} className="bg-[#5C3A21] text-white px-4 rounded-xl font-bold text-sm">Add</button>
-                  </div>
-                </div>
 
                 {form.gallery.length > 0 && (
                   <div className="flex gap-3 mt-5 overflow-x-auto pb-2">
@@ -257,22 +252,23 @@ export default function AdminProducts() {
                     <input required className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={form.weight} onChange={e=>setForm({...form, weight: e.target.value})} />
                   </div>
                   <div>
-                    {/* Dynamic Category Input Box that allows custom typing to ADD a category, or picking existing ones */}
-                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Category (Type New or Pick below)</label>
-                    <input 
-                      required 
-                      list="existing-categories"
-                      placeholder="e.g. Almonds, Walnuts"
-                      className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" 
-                      value={form.category} 
-                      onChange={e=>setForm({...form, category: e.target.value})} 
-                    />
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Category</label>
+                    <input required list="existing-categories" placeholder="e.g. Almonds" className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl font-medium outline-none text-sm" value={form.category} onChange={e=>setForm({...form, category: e.target.value})} />
                     <datalist id="existing-categories">
                       {existingCategories.map((c, i) => <option key={i} value={c} />)}
-                      <option value="Premium Combo" />
-                      <option value="Daily Use" />
-                      <option value="Gift Box" />
                     </datalist>
+                  </div>
+                </div>
+
+                {/* NEW: RATING AND REVIEWS SECTION */}
+                <div className="grid grid-cols-2 gap-3 bg-yellow-50 p-3 rounded-xl border border-yellow-100">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Rating (Out of 5)</label>
+                    <input type="number" step="0.1" max="5" min="1" className="w-full bg-white border border-gray-200 p-3 rounded-xl font-bold outline-none text-sm" value={form.rating} onChange={e=>setForm({...form, rating: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Total Reviews</label>
+                    <input type="number" className="w-full bg-white border border-gray-200 p-3 rounded-xl font-bold outline-none text-sm" value={form.reviews_count} onChange={e=>setForm({...form, reviews_count: e.target.value})} />
                   </div>
                 </div>
 
