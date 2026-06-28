@@ -19,11 +19,9 @@ export default function ProductDetails() {
   useEffect(() => {
     if (!id) return;
     const fetchProduct = async () => {
-      // আসল প্রোডাক্টের ডেটা আনা হচ্ছে
       const { data, error } = await supabase.from("products").select("*").eq("id", id).single();
       if (data) {
         setProduct(data);
-        // নিচে দেখানোর জন্য একই ক্যাটাগরির অন্য প্রোডাক্ট
         const { data: similar } = await supabase.from("products").select("*").eq("category", data.category).neq("id", id).limit(10);
         if (similar) setSimilarProducts(similar);
       }
@@ -35,12 +33,9 @@ export default function ProductDetails() {
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-900">Loading...</div>;
   if (!product) return <div className="min-h-screen flex items-center justify-center font-bold text-red-500">Product not found</div>;
 
-  // দাম এবং ডিসকাউন্টের হিসাব
   const mrp = Number(product.price) || 0;
   const sale = Number(product.sale_price) || mrp;
   const savings = mrp > sale ? mrp - sale : 0;
-
-  // ছবির গ্যালারি সেটআপ (মাল্টিপল ছবি থাকলে স্লাইডার যাবে)
   const images = product.gallery?.length > 0 ? product.gallery : (product.image_url ? [product.image_url] : []);
 
   const handleTouchEnd = () => {
@@ -78,7 +73,7 @@ export default function ProductDetails() {
         </button>
       </div>
 
-      {/* Image Slider (গ্যালারি থেকে আসা ছবিগুলো স্লাইড হবে) */}
+      {/* Image Slider */}
       <div 
         className="w-full bg-white relative pt-4 pb-4 flex flex-col items-center"
         onTouchStart={(e) => setTouchStartX(e.targetTouches[0].clientX)}
@@ -96,7 +91,6 @@ export default function ProductDetails() {
       </div>
 
       <div className="px-4 mt-5 space-y-6">
-        {/* Title & Ratings */}
         <div>
           <p className="text-[10px] font-extrabold text-[#5C3A21] uppercase tracking-wider mb-1">ROYAL BASKET NO.1</p>
           <h1 className="text-xl font-black leading-tight text-gray-950">{product.name}</h1>
@@ -104,11 +98,10 @@ export default function ProductDetails() {
             <div className="bg-[#198754] text-white flex items-center px-2 py-0.5 rounded text-xs font-bold gap-1">
               {product.rating || 4.5} <span className="text-[10px]">★</span>
             </div>
-            <span className="text-xs text-gray-500 font-medium">38 Ratings & Reviews</span>
+            <span className="text-xs text-gray-500 font-medium">{product.reviews_count || 38} Ratings & Reviews</span>
           </div>
         </div>
 
-        {/* Pricing Area */}
         <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-gray-950">₹{sale}</span>
@@ -121,7 +114,6 @@ export default function ProductDetails() {
           )}
         </div>
 
-        {/* Select Unit */}
         <div>
           <h3 className="text-sm font-extrabold text-gray-900 mb-3">Select Unit</h3>
           <div className="inline-block border-2 border-[#5C3A21] bg-[#5C3A21]/5 text-[#5C3A21] font-bold px-4 py-2 rounded-xl">
@@ -129,7 +121,6 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* Features (Delivery, Return, Safe) */}
         <div className="grid grid-cols-3 gap-3">
           <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center gap-1">
             <span className="text-xl">🚚</span>
@@ -145,7 +136,6 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* Offers */}
         <div className="bg-[#fdf8f5] rounded-2xl p-4 border border-[#f5e6de]">
           <h3 className="font-extrabold text-sm text-[#5C3A21] mb-3 flex items-center gap-2"><span>🏷️</span> Available Offers</h3>
           <div className="space-y-4">
@@ -160,7 +150,6 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* Return Support */}
         <div className="bg-gray-50/80 rounded-2xl p-4 flex gap-3 border border-gray-100">
           <span className="text-[#5C3A21] text-xl mt-0.5">🔄</span>
           <div>
@@ -169,7 +158,6 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* Description */}
         <div>
           <h3 className="text-sm font-extrabold text-gray-900 mb-2">Product Description</h3>
           <p className="text-xs text-gray-600 font-medium leading-relaxed whitespace-pre-wrap">
@@ -177,7 +165,6 @@ export default function ProductDetails() {
           </p>
         </div>
 
-        {/* Weight & Category Details */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-1">
             <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider">Weight</span>
@@ -190,7 +177,6 @@ export default function ProductDetails() {
         </div>
       </div>
 
-      {/* Similar Products */}
       {similarProducts.length > 0 && (
         <div className="pt-4 border-t border-gray-100 mt-6 bg-gray-50/50 pb-6">
           <div className="flex justify-between items-center px-4 mb-4">
@@ -214,14 +200,13 @@ export default function ProductDetails() {
         </div>
       )}
 
-      {/* Ratings Review (Static Placeholder as per design) */}
       <div className="pt-4 border-t border-gray-100 mt-2 px-4 mb-6">
         <h3 className="text-sm font-extrabold mb-4 text-gray-900">Ratings & Reviews</h3>
         <div className="flex items-center gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
           <div className="flex flex-col items-center">
-            <span className="text-4xl font-black text-gray-900">4.4</span>
+            <span className="text-4xl font-black text-gray-900">{product.rating || 4.5}</span>
             <span className="text-[10px] text-[#198754] font-bold mt-1">★ ★ ★ ★ ☆</span>
-            <span className="text-[9px] text-gray-400 font-extrabold mt-1 uppercase tracking-wider">38 Ratings</span>
+            <span className="text-[9px] text-gray-400 font-extrabold mt-1 uppercase tracking-wider">{product.reviews_count || 38} Ratings</span>
           </div>
           <div className="flex-1 space-y-2">
             {[5, 4, 3, 2, 1].map((star, i) => (
@@ -238,7 +223,6 @@ export default function ProductDetails() {
 
       <p className="text-xs text-center text-gray-400 font-bold mb-4">Secured by Royal Basket</p>
 
-      {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex gap-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
         <button onClick={addToCart} className="flex-1 bg-white border-2 border-[#5C3A21] text-[#5C3A21] py-3 rounded-xl font-black text-sm active:scale-95 transition-transform">
           Add to Cart
