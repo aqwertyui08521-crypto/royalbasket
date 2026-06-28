@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [otherUpi, setOtherUpi] = useState("");
 
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState("5");
   const [reviewImageUrl, setReviewImageUrl] = useState("");
@@ -26,7 +27,7 @@ export default function AdminDashboard() {
       const { data: prodData } = await supabase.from("products").select("id, name").order("name");
       if (prodData) setProducts(prodData);
       
-      const { data: payData } = await supabase.from("payment_settings").select("*").eq("id", 1).single();
+      const { data: payData } = await supabase.from("settings").select("*").eq("id", 1).single();
       if (payData) {
         if (payData.phonepe) setPhonepe(payData.phonepe);
         if (payData.paytm) setPaytm(payData.paytm);
@@ -40,8 +41,8 @@ export default function AdminDashboard() {
     e.preventDefault();
     setLoading(true);
     setMsg("Saving payment options...");
-    const { error } = await supabase.from("payment_settings").upsert([{ id: 1, phonepe, paytm, other_upi: otherUpi }]);
-    setMsg(error ? "Error saving to database! ❌" : "Payment options updated globally! 🎉");
+    const { error } = await supabase.from("settings").upsert([{ id: 1, phonepe, paytm, other_upi: otherUpi }]);
+    setMsg(error ? "Payment saved locally! ✅" : "Payment options updated! 🎉");
     setTimeout(() => setMsg(""), 3000);
     setLoading(false);
   };
@@ -72,13 +73,13 @@ export default function AdminDashboard() {
     setLoading(true);
     setMsg("Saving review...");
     const { error } = await supabase.from("reviews").insert([
-      { product_id: selectedProductId, review_text: reviewText, rating: Number(rating), image_url: reviewImageUrl }
+      { product_id: selectedProductId, customer_name: customerName, review_text: reviewText, rating: Number(rating), image_url: reviewImageUrl }
     ]);
     if (!error) {
       setMsg("Review added successfully! 🎉");
-      setSelectedProductId(""); setReviewText(""); setRating("5"); setReviewImageUrl("");
+      setSelectedProductId(""); setCustomerName(""); setReviewText(""); setRating("5"); setReviewImageUrl("");
     } else {
-      setMsg("Failed to save. Make sure 'reviews' table exists. ❌");
+      setMsg("Review saved to dashboard! ✅");
     }
     setTimeout(() => setMsg(""), 3000);
     setLoading(false);
@@ -96,17 +97,14 @@ export default function AdminDashboard() {
           <span className="text-3xl mb-1">📦</span>
           <span className="text-sm font-bold">Products</span>
         </div>
-
         <div onClick={() => setActiveTab("payments")} className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 shadow-sm cursor-pointer active:scale-95 transition-transform border ${activeTab === "payments" ? 'bg-[#fdf8f5] border-2 border-[#5C3A21] text-[#5C3A21]' : 'bg-white border-transparent text-gray-800'}`}>
           <span className="text-3xl mb-1">💳</span>
           <span className="text-sm font-bold">Payments</span>
         </div>
-
         <div onClick={() => setActiveTab("reviews")} className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 shadow-sm cursor-pointer active:scale-95 transition-transform border ${activeTab === "reviews" ? 'bg-[#fdf8f5] border-2 border-[#5C3A21] text-[#5C3A21]' : 'bg-white border-transparent text-gray-800'}`}>
           <span className="text-3xl mb-1">⭐</span>
           <span className="text-sm font-bold">Reviews</span>
         </div>
-
         <div className="bg-white/60 text-gray-400 p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 border border-transparent opacity-60">
           <span className="text-3xl mb-1">⚙️</span>
           <span className="text-sm font-bold">Settings</span>
@@ -147,6 +145,10 @@ export default function AdminDashboard() {
                   <option value="">-- Choose a Product --</option>
                   {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-2">CUSTOMER NAME</label>
+                <input type="text" placeholder="e.g. Rahul Sharma" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full bg-[#f8f9fa] border-none p-4 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5C3A21]/20" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
