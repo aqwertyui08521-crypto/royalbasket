@@ -13,18 +13,25 @@ export default function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+  const [reviewsList, setReviewsList] = useState<any[]>([]);
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchEndX, setTouchEndX] = useState(0);
 
   useEffect(() => {
     if (!id) return;
     const fetchProduct = async () => {
+      // Product details load
       const { data, error } = await supabase.from("products").select("*").eq("id", id).single();
       if (data) {
         setProduct(data);
         const { data: similar } = await supabase.from("products").select("*").eq("category", data.category).neq("id", id).limit(10);
         if (similar) setSimilarProducts(similar);
       }
+      
+      // Live Reviews load from Database
+      const { data: revs } = await supabase.from("reviews").select("*").eq("product_id", id).order("created_at", { ascending: false });
+      if (revs) setReviewsList(revs);
+
       setLoading(false);
     };
     fetchProduct();
@@ -181,7 +188,7 @@ export default function ProductDetails() {
         <div className="pt-4 border-t border-gray-100 mt-6 bg-gray-50/50 pb-6">
           <div className="flex justify-between items-center px-4 mb-4">
             <h3 className="text-sm font-extrabold text-gray-900">Similar Products</h3>
-            <span className="text-[10px] font-extrabold text-[#5C3A21] bg-[#5C3A21]/10 px-2 py-1 rounded-md">View All</span>
+            <span onClick={() => router.push('/products')} className="cursor-pointer text-[10px] font-extrabold text-[#5C3A21] bg-[#5C3A21]/10 px-2 py-1 rounded-md">View All</span>
           </div>
           <div className="flex gap-4 overflow-x-auto px-4 pb-4 no-scrollbar">
             {similarProducts.map((p) => {
@@ -219,6 +226,27 @@ export default function ProductDetails() {
             ))}
           </div>
         </div>
+
+        {/* Live Reviews Section */}
+        {reviewsList.length > 0 && (
+          <div className="mt-6 space-y-5">
+            {reviewsList.map((r: any, idx: number) => (
+              <div key={idx} className="border-b border-gray-100 pb-5 last:border-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="bg-[#198754] text-white flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold gap-0.5">
+                    {r.rating} <span className="text-[9px]">★</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-800">Verified Buyer</span>
+                </div>
+                <p className="text-xs text-gray-600 font-medium leading-relaxed mb-3 whitespace-pre-wrap">{r.review_text}</p>
+                {r.image_url && (
+                  <img src={r.image_url} alt="Review attachment" className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
       </div>
 
       <p className="text-xs text-center text-gray-400 font-bold mb-4">Secured by Royal Basket</p>
