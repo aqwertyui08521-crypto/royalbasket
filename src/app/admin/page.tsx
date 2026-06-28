@@ -12,41 +12,39 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
-  // Payment states (এগুলোতে কোনো হাত দেওয়া হয়নি)
+  // Payment states (Local Storage-এর জন্য)
   const [phonepe, setPhonepe] = useState("");
   const [paytm, setPaytm] = useState("");
   const [otherUpi, setOtherUpi] = useState("");
 
-  // Review states (নতুন যোগ করা হলো)
+  // Review states 
   const [selectedProductId, setSelectedProductId] = useState("");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState("5");
   const [reviewImageUrl, setReviewImageUrl] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
-      // রিভিউয়ের জন্য প্রোডাক্ট আনা
-      const { data: prodData } = await supabase.from("products").select("id, name").order("name");
-      if (prodData) setProducts(prodData);
-      
-      // পেমেন্ট সেটিংস আনা
-      const { data: payData } = await supabase.from("settings").select("*").eq("id", 1).single();
-      if (payData) {
-        if (payData.phonepe) setPhonepe(payData.phonepe);
-        if (payData.paytm) setPaytm(payData.paytm);
-        if (payData.other_upi) setOtherUpi(payData.other_upi);
-      }
+    // রিভিউয়ের জন্য প্রোডাক্ট লিস্ট আনা
+    const fetchProducts = async () => {
+      const { data } = await supabase.from("products").select("id, name").order("name");
+      if (data) setProducts(data);
     };
-    fetchData();
+    fetchProducts();
+
+    // পেমেন্ট ডাটা আপনার আগের নিয়মে Local Storage থেকে আনা (যাতে রিফ্রেশ করলে না উড়ে যায়)
+    setPhonepe(localStorage.getItem("royal_phonepe") || "rubi9321@ptyes");
+    setPaytm(localStorage.getItem("royal_paytm") || "");
+    setOtherUpi(localStorage.getItem("royal_other_upi") || "");
   }, []);
 
-  // Payment Save Function (আগের মতোই আছে)
-  const handleSavePayments = async (e: any) => {
+  // Payment Save Function (সম্পূর্ণ আগের নিয়মে ফিরিয়ে দেওয়া হলো)
+  const handleSavePayments = (e: any) => {
     e.preventDefault();
     setLoading(true);
-    setMsg("Saving payment options...");
-    const { error } = await supabase.from("settings").upsert([{ id: 1, phonepe, paytm, other_upi: otherUpi }]);
-    setMsg(error ? "Payment saved locally! ✅" : "Payment options updated! 🎉");
+    localStorage.setItem("royal_phonepe", phonepe);
+    localStorage.setItem("royal_paytm", paytm);
+    localStorage.setItem("royal_other_upi", otherUpi);
+    setMsg("Payment options saved successfully! ✅");
     setTimeout(() => setMsg(""), 3000);
     setLoading(false);
   };
@@ -85,7 +83,7 @@ export default function AdminDashboard() {
       setMsg("Review added successfully! 🎉");
       setSelectedProductId(""); setReviewText(""); setRating("5"); setReviewImageUrl("");
     } else {
-      setMsg("Review saved to dashboard! ✅");
+      setMsg("Review table missing, please check database. ❌");
     }
     setTimeout(() => setMsg(""), 3000);
     setLoading(false);
@@ -93,33 +91,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-black p-4 font-sans pb-10">
-      {/* Header */}
       <div className="bg-white p-6 rounded-3xl mb-6 shadow-sm max-w-md mx-auto border border-gray-100">
         <h1 className="text-2xl font-black text-gray-900 leading-tight">Admin Dashboard</h1>
         <p className="text-xs text-gray-500 font-medium mt-1">Manage your store settings and products</p>
       </div>
 
-      {/* Grid Menu */}
       <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-6">
-        {/* ১. Products Box (আগের মতোই) */}
         <div onClick={() => router.push('/admin/products')} className="bg-[#5C3A21] text-white p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 shadow-sm cursor-pointer active:scale-95 transition-transform">
           <span className="text-3xl mb-1">📦</span>
           <span className="text-sm font-bold">Products</span>
         </div>
-
-        {/* ২. Payments Box (আগের মতোই) */}
         <div onClick={() => setActiveTab("payments")} className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 shadow-sm cursor-pointer active:scale-95 transition-transform border ${activeTab === "payments" ? 'bg-[#fdf8f5] border-2 border-[#5C3A21] text-[#5C3A21]' : 'bg-white border-transparent text-gray-800'}`}>
           <span className="text-3xl mb-1">💳</span>
           <span className="text-sm font-bold">Payments</span>
         </div>
-
-        {/* ৩. Reviews Box (Orders-এর জায়গায় নতুন) */}
         <div onClick={() => setActiveTab("reviews")} className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 shadow-sm cursor-pointer active:scale-95 transition-transform border ${activeTab === "reviews" ? 'bg-[#fdf8f5] border-2 border-[#5C3A21] text-[#5C3A21]' : 'bg-white border-transparent text-gray-800'}`}>
           <span className="text-3xl mb-1">⭐</span>
           <span className="text-sm font-bold">Reviews</span>
         </div>
-
-        {/* ৪. Settings Box (আগের মতোই) */}
         <div className="bg-white/60 text-gray-400 p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 border border-transparent opacity-60">
           <span className="text-3xl mb-1">⚙️</span>
           <span className="text-sm font-bold">Settings</span>
@@ -128,11 +117,8 @@ export default function AdminDashboard() {
 
       {msg && <div className="max-w-md mx-auto mb-4 p-3 text-xs font-bold rounded-xl bg-[#5C3A21]/10 text-[#5C3A21] text-center">{msg}</div>}
 
-      {/* Dynamic Content Area (যে বক্সে ক্লিক করবেন তার ফর্ম দেখাবে) */}
       <div className="max-w-md mx-auto">
         {activeTab === "payments" ? (
-          
-          /* Payment Form (আপনার অরিজিনাল ডিজাইন) */
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-5">
             <h2 className="text-lg font-black text-gray-900">Set Payment Options</h2>
             <form onSubmit={handleSavePayments} className="space-y-4">
@@ -154,8 +140,6 @@ export default function AdminDashboard() {
             </form>
           </div>
         ) : (
-          
-          /* Review Form (পেমেন্ট ডিজাইনের সাথে মিলিয়ে তৈরি) */
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-5">
             <h2 className="text-lg font-black text-gray-900">Add Product Review</h2>
             <form onSubmit={handleSaveReview} className="space-y-4">
