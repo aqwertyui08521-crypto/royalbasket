@@ -12,44 +12,40 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
-  // Payment states (Local Storage-এর জন্য)
   const [phonepe, setPhonepe] = useState("");
   const [paytm, setPaytm] = useState("");
   const [otherUpi, setOtherUpi] = useState("");
 
-  // Review states 
   const [selectedProductId, setSelectedProductId] = useState("");
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState("5");
   const [reviewImageUrl, setReviewImageUrl] = useState("");
 
   useEffect(() => {
-    // রিভিউয়ের জন্য প্রোডাক্ট লিস্ট আনা
-    const fetchProducts = async () => {
-      const { data } = await supabase.from("products").select("id, name").order("name");
-      if (data) setProducts(data);
+    const fetchData = async () => {
+      const { data: prodData } = await supabase.from("products").select("id, name").order("name");
+      if (prodData) setProducts(prodData);
+      
+      const { data: payData } = await supabase.from("payment_settings").select("*").eq("id", 1).single();
+      if (payData) {
+        if (payData.phonepe) setPhonepe(payData.phonepe);
+        if (payData.paytm) setPaytm(payData.paytm);
+        if (payData.other_upi) setOtherUpi(payData.other_upi);
+      }
     };
-    fetchProducts();
-
-    // পেমেন্ট ডাটা আপনার আগের নিয়মে Local Storage থেকে আনা (যাতে রিফ্রেশ করলে না উড়ে যায়)
-    setPhonepe(localStorage.getItem("royal_phonepe") || "rubi9321@ptyes");
-    setPaytm(localStorage.getItem("royal_paytm") || "");
-    setOtherUpi(localStorage.getItem("royal_other_upi") || "");
+    fetchData();
   }, []);
 
-  // Payment Save Function (সম্পূর্ণ আগের নিয়মে ফিরিয়ে দেওয়া হলো)
-  const handleSavePayments = (e: any) => {
+  const handleSavePayments = async (e: any) => {
     e.preventDefault();
     setLoading(true);
-    localStorage.setItem("royal_phonepe", phonepe);
-    localStorage.setItem("royal_paytm", paytm);
-    localStorage.setItem("royal_other_upi", otherUpi);
-    setMsg("Payment options saved successfully! ✅");
+    setMsg("Saving payment options...");
+    const { error } = await supabase.from("payment_settings").upsert([{ id: 1, phonepe, paytm, other_upi: otherUpi }]);
+    setMsg(error ? "Error saving to database! ❌" : "Payment options updated globally! 🎉");
     setTimeout(() => setMsg(""), 3000);
     setLoading(false);
   };
 
-  // Review Photo Upload Function
   const handleReviewPhoto = async (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -67,7 +63,6 @@ export default function AdminDashboard() {
     setLoading(false);
   };
 
-  // Review Save Function
   const handleSaveReview = async (e: any) => {
     e.preventDefault();
     if (!selectedProductId || !reviewText) {
@@ -83,7 +78,7 @@ export default function AdminDashboard() {
       setMsg("Review added successfully! 🎉");
       setSelectedProductId(""); setReviewText(""); setRating("5"); setReviewImageUrl("");
     } else {
-      setMsg("Review table missing, please check database. ❌");
+      setMsg("Failed to save. Make sure 'reviews' table exists. ❌");
     }
     setTimeout(() => setMsg(""), 3000);
     setLoading(false);
@@ -101,14 +96,17 @@ export default function AdminDashboard() {
           <span className="text-3xl mb-1">📦</span>
           <span className="text-sm font-bold">Products</span>
         </div>
+
         <div onClick={() => setActiveTab("payments")} className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 shadow-sm cursor-pointer active:scale-95 transition-transform border ${activeTab === "payments" ? 'bg-[#fdf8f5] border-2 border-[#5C3A21] text-[#5C3A21]' : 'bg-white border-transparent text-gray-800'}`}>
           <span className="text-3xl mb-1">💳</span>
           <span className="text-sm font-bold">Payments</span>
         </div>
+
         <div onClick={() => setActiveTab("reviews")} className={`p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 shadow-sm cursor-pointer active:scale-95 transition-transform border ${activeTab === "reviews" ? 'bg-[#fdf8f5] border-2 border-[#5C3A21] text-[#5C3A21]' : 'bg-white border-transparent text-gray-800'}`}>
           <span className="text-3xl mb-1">⭐</span>
           <span className="text-sm font-bold">Reviews</span>
         </div>
+
         <div className="bg-white/60 text-gray-400 p-5 rounded-3xl flex flex-col items-center justify-center text-center gap-2 border border-transparent opacity-60">
           <span className="text-3xl mb-1">⚙️</span>
           <span className="text-sm font-bold">Settings</span>
