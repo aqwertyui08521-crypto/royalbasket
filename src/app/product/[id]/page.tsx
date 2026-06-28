@@ -20,7 +20,6 @@ export default function ProductDetails() {
   useEffect(() => {
     if (!id) return;
     const fetchProduct = async () => {
-      // Product details load
       const { data, error } = await supabase.from("products").select("*").eq("id", id).single();
       if (data) {
         setProduct(data);
@@ -28,7 +27,6 @@ export default function ProductDetails() {
         if (similar) setSimilarProducts(similar);
       }
       
-      // Live Reviews load from Database
       const { data: revs } = await supabase.from("reviews").select("*").eq("product_id", id).order("created_at", { ascending: false });
       if (revs) setReviewsList(revs);
 
@@ -44,6 +42,9 @@ export default function ProductDetails() {
   const sale = Number(product.sale_price) || mrp;
   const savings = mrp > sale ? mrp - sale : 0;
   const images = product.gallery?.length > 0 ? product.gallery : (product.image_url ? [product.image_url] : []);
+  
+  // Extract all review images for the gallery
+  const reviewImages = reviewsList.filter(r => r.image_url).map(r => r.image_url);
 
   const handleTouchEnd = () => {
     if (!touchStartX || !touchEndX) return;
@@ -69,7 +70,6 @@ export default function ProductDetails() {
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900 pb-24">
-      {/* Header */}
       <div className="sticky top-0 bg-white z-40 p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={() => router.back()} className="text-xl font-bold">←</button>
@@ -80,7 +80,6 @@ export default function ProductDetails() {
         </button>
       </div>
 
-      {/* Image Slider */}
       <div 
         className="w-full bg-white relative pt-4 pb-4 flex flex-col items-center"
         onTouchStart={(e) => setTouchStartX(e.targetTouches[0].clientX)}
@@ -130,16 +129,13 @@ export default function ProductDetails() {
 
         <div className="grid grid-cols-3 gap-3">
           <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center gap-1">
-            <span className="text-xl">🚚</span>
-            <span className="text-[10px] font-extrabold text-gray-600">Free Delivery</span>
+            <span className="text-xl">🚚</span><span className="text-[10px] font-extrabold text-gray-600">Free Delivery</span>
           </div>
           <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center gap-1">
-            <span className="text-xl">📦</span>
-            <span className="text-[10px] font-extrabold text-gray-600">Easy Return</span>
+            <span className="text-xl">📦</span><span className="text-[10px] font-extrabold text-gray-600">Easy Return</span>
           </div>
           <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center gap-1">
-            <span className="text-xl">🛡️</span>
-            <span className="text-[10px] font-extrabold text-gray-600">100% Safe</span>
+            <span className="text-xl">🛡️</span><span className="text-[10px] font-extrabold text-gray-600">100% Safe</span>
           </div>
         </div>
 
@@ -157,30 +153,11 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        <div className="bg-gray-50/80 rounded-2xl p-4 flex gap-3 border border-gray-100">
-          <span className="text-[#5C3A21] text-xl mt-0.5">🔄</span>
-          <div>
-            <h4 className="text-xs font-black text-gray-900 mb-1">7 Days Return Policy</h4>
-            <p className="text-[10px] text-gray-500 font-medium leading-relaxed">Wrong, missing or damaged item guarantee</p>
-          </div>
-        </div>
-
         <div>
           <h3 className="text-sm font-extrabold text-gray-900 mb-2">Product Description</h3>
           <p className="text-xs text-gray-600 font-medium leading-relaxed whitespace-pre-wrap">
             {product.description || "No description available."}
           </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-1">
-            <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider">Weight</span>
-            <p className="text-sm font-black text-gray-900">{product.weight}</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-1">
-            <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider">Category</span>
-            <p className="text-sm font-black text-gray-900">{product.category}</p>
-          </div>
         </div>
       </div>
 
@@ -209,6 +186,8 @@ export default function ProductDetails() {
 
       <div className="pt-4 border-t border-gray-100 mt-2 px-4 mb-6">
         <h3 className="text-sm font-extrabold mb-4 text-gray-900">Ratings & Reviews</h3>
+        
+        {/* Rating Score Card */}
         <div className="flex items-center gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
           <div className="flex flex-col items-center">
             <span className="text-4xl font-black text-gray-900">{product.rating || 4.5}</span>
@@ -227,21 +206,63 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* Live Reviews Section */}
+        {/* CUSTOMER PHOTOS GALLERY (Flipkart Style) */}
+        {reviewImages.length > 0 && (
+          <div className="mt-6 mb-2">
+            <h4 className="text-sm font-extrabold text-gray-900 mb-3">Customer Photos</h4>
+            {reviewImages.length >= 3 ? (
+              <div className="flex gap-2 h-44">
+                {/* Left Big Image */}
+                <div className="w-1/2 h-full relative rounded-2xl overflow-hidden shadow-sm">
+                  <img src={reviewImages[0]} className="w-full h-full object-cover" alt="Review 1" />
+                </div>
+                {/* Right Small Images Grid */}
+                <div className="w-1/2 grid grid-cols-2 grid-rows-2 gap-2 h-full">
+                  {reviewImages.slice(1, 5).map((img, idx) => {
+                    const isLast = idx === 3;
+                    const remaining = reviewImages.length - 5;
+                    return (
+                      <div key={idx} className="relative w-full h-full rounded-xl overflow-hidden shadow-sm">
+                        <img src={img} className="w-full h-full object-cover" alt={`Review ${idx + 2}`} />
+                        {isLast && remaining > 0 && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="text-white font-black text-sm">+{remaining}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* Fallback for 1 or 2 images */
+              <div className="flex gap-3 overflow-x-auto no-scrollbar">
+                {reviewImages.map((img, idx) => (
+                  <img key={idx} src={img} className="w-32 h-32 rounded-2xl object-cover shadow-sm shrink-0" alt={`Review ${idx + 1}`} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Live Reviews Text Section */}
         {reviewsList.length > 0 && (
-          <div className="mt-6 space-y-5">
+          <div className="mt-6 space-y-6">
             {reviewsList.map((r: any, idx: number) => (
               <div key={idx} className="border-b border-gray-100 pb-5 last:border-0">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center justify-between mb-2">
                   <div className="bg-[#198754] text-white flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold gap-0.5">
                     {r.rating} <span className="text-[9px]">★</span>
                   </div>
-                  <span className="text-xs font-bold text-gray-800">Verified Buyer</span>
                 </div>
-                <p className="text-xs text-gray-600 font-medium leading-relaxed mb-3 whitespace-pre-wrap">{r.review_text}</p>
+                <p className="text-xs text-gray-800 font-bold leading-relaxed mb-1 whitespace-pre-wrap">{r.review_text}</p>
                 {r.image_url && (
-                  <img src={r.image_url} alt="Review attachment" className="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+                  <img src={r.image_url} alt="Review attachment" className="w-16 h-16 object-cover rounded-xl mt-2 mb-2" />
                 )}
+                <div className="flex items-center gap-1.5 mt-3">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase">{r.customer_name || "Verified Buyer"}</span>
+                  <span className="text-green-600 font-black text-[10px]">✔</span>
+                </div>
               </div>
             ))}
           </div>
