@@ -12,12 +12,13 @@ export default function CheckoutPage() {
   
   const [cartData, setCartData] = useState<any[]>([]);
   const [totals, setTotals] = useState({ itemTotal: 0, saved: 0, toPay: 0, totalQty: 0 });
+  const [paymentSettings, setPaymentSettings] = useState<any[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("saved_address");
     if (saved) { setAddress(JSON.parse(saved)); setStep(2); }
     
-    const loadCart = async () => {
+    const loadCartAndPayment = async () => {
       try {
         const savedCart = localStorage.getItem("royal_cart");
         if (savedCart) {
@@ -44,14 +45,19 @@ export default function CheckoutPage() {
             setTotals({ itemTotal: tOld, saved: (tOld - tNew), toPay: tNew, totalQty: tQty });
           }
         }
+
+        const { data: paySettings } = await supabase.from("payment_settings").select("*");
+        if (paySettings) {
+          setPaymentSettings(paySettings);
+        }
+
       } catch (error) {
         console.error("Cart error", error);
       }
     };
-    loadCart();
+    loadCartAndPayment();
   }, []);
 
-  // নতুন ফাংশন: কার্টের আইটেম বাড়ানো, কমানো বা রিমুভ করার জন্য
   const updateCartItem = (id: string, action: 'increase' | 'decrease' | 'remove') => {
     let savedCart = JSON.parse(localStorage.getItem("royal_cart") || "{}");
     
@@ -67,11 +73,9 @@ export default function CheckoutPage() {
       delete savedCart[id];
     }
 
-    // লোকাল স্টোরেজ আপডেট করা
     localStorage.setItem("royal_cart", JSON.stringify(savedCart));
     window.dispatchEvent(new Event("storage"));
 
-    // স্ক্রিনের ডেটা এবং বিল আপডেট করা
     let tempCart = [...cartData];
     if (action === 'increase') {
       const item = tempCart.find(i => i.id === id);
@@ -173,13 +177,11 @@ export default function CheckoutPage() {
                       <h4 className="font-extrabold text-sm mt-1">₹{item.sale_price || item.price}</h4>
                     </div>
                     <div className="flex flex-col items-end justify-between">
-                      {/* + এবং - বাটন ফাংশনাল করা হয়েছে */}
                       <div className="bg-[#5C3A21] text-white flex items-center rounded-lg px-2 py-1 gap-3">
                         <button onClick={() => updateCartItem(item.id, 'decrease')} className="text-sm font-bold px-1 active:scale-90">-</button>
                         <span className="text-xs font-bold">{item.qty}</span>
                         <button onClick={() => updateCartItem(item.id, 'increase')} className="text-sm font-bold px-1 active:scale-90">+</button>
                       </div>
-                      {/* Remove বাটন ফাংশনাল করা হয়েছে */}
                       <button onClick={() => updateCartItem(item.id, 'remove')} className="text-[10px] text-red-500 font-bold mt-2">Remove</button>
                     </div>
                   </div>
@@ -187,6 +189,31 @@ export default function CheckoutPage() {
                 {cartData.length === 0 && <p className="text-sm text-center text-gray-500 py-4">Your cart is empty</p>}
               </div>
             </div>
+
+            {paymentSettings && paymentSettings.length > 0 && (
+              <div className="bg-white p-4 rounded-3xl shadow-sm border border-green-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] font-black px-2 py-1 rounded-bl-lg uppercase">Available</div>
+                <h2 className="font-extrabold text-sm mb-3 text-gray-800">Accepted UPI Payments</h2>
+                <div className="flex flex-col gap-2">
+                  {paymentSettings.map((pay, idx) => (
+                    pay.upi_id ? (
+                      <div key={idx} className="flex items-center justify-between bg-green-50 border border-green-100 p-3 rounded-2xl">
+                        <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-green-600 shadow-sm text-lg">
+                            🛡️
+                           </div>
+                           <div>
+                             <p className="text-[10px] text-green-700 font-bold uppercase tracking-wide">Secured UPI ID</p>
+                             <p className="text-sm font-black text-gray-900">{pay.upi_id}</p>
+                           </div>
+                        </div>
+                        <span className="text-green-600 font-extrabold text-xs">✓ Verified</span>
+                      </div>
+                    ) : null
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="bg-white p-4 rounded-3xl shadow-sm">
               <h2 className="font-extrabold text-sm mb-3">Offers Available</h2>
