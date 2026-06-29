@@ -19,32 +19,20 @@ export default function PaymentPage() {
     if (total) setAmount(Number(total));
     if (savings) setSavedAmount(Number(savings));
 
-
-
-    
-  // ২. অ্যাডমিন প্যানেল থেকে UPI সেটিংস আনা হচ্ছে (সঠিক payment_settings টেবিল থেকে)
-      supabase.from("payment_settings").select("*").eq("id", 1).single().then(({data}) => {
-             if(data) {
-                        setUpi({ 
-                                     phonepe: data.phonepe || "", 
-                                                  paytm: data.paytm || "", 
-                                                               generic: data.other_upi || "" 
-                                                                          });
-                                                                                     // ডিফল্টভাবে প্রথম যেই অপশনটা থাকবে সেটা সিলেক্ট করে রাখা
-                                                                                                if(data.phonepe) setSelectedPayment("phonepe");
-                                                                                                           else if(data.paytm) setSelectedPayment("paytm");
-                                                                                                                      else if(data.other_upi) setSelectedPayment("generic");
-                                                                                                                             }
-                                                                                                                                 });
-
-        
-        // ডিফল্টভাবে প্রথম যেই অপশনটা থাকবে সেটা সিলেক্ট করে রাখা
-        if(settings.phonepe_upi || globalUpi) setSelectedPayment("phonepe");
-        else if(settings.paytm_upi || globalUpi) setSelectedPayment("paytm");
-        else if(settings.qr_code_url || globalUpi) setSelectedPayment("generic");
-      }
-    };
-    fetchPaymentSettings();
+    // ২. অ্যাডমিন প্যানেল থেকে UPI সেটিংস আনা হচ্ছে (সঠিক payment_settings টেবিল থেকে)
+    supabase.from("payment_settings").select("*").eq("id", 1).single().then(({data}) => {
+       if(data) {
+           setUpi({ 
+             phonepe: data.phonepe || "", 
+             paytm: data.paytm || "", 
+             generic: data.other_upi || "" 
+           });
+           // ডিফল্টভাবে প্রথম যেই অপশনটা থাকবে সেটা সিলেক্ট করে রাখা
+           if(data.phonepe) setSelectedPayment("phonepe");
+           else if(data.paytm) setSelectedPayment("paytm");
+           else if(data.other_upi) setSelectedPayment("generic");
+       }
+    });
   }, []);
 
   const handlePay = () => {
