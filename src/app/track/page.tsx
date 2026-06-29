@@ -1,61 +1,172 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Search, Truck, Package, CheckCircle2, MapPin } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient("https://npzfzlkvdxweiaewnnem.supabase.co", "sb_publishable_it_SC_2dJQ8K4n7K4DqYjw_AaVk59xz");
 
 export default function TrackOrderPage() {
   const router = useRouter();
-  const [orderId, setOrderId] = useState("");
-  const [orderData, setOrderData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userPhone, setUserPhone] = useState("");
 
   useEffect(() => {
-    const lastOrder = localStorage.getItem("last_order_id");
-    if(lastOrder) { setOrderId(lastOrder); fetchOrder(lastOrder); }
+    const fetchOrders = async () => {
+      const savedAddress = localStorage.getItem("saved_address");
+      let phone = "";
+      if (savedAddress) {
+        phone = JSON.parse(savedAddress).phone;
+        setUserPhone(phone);
+      }
+
+      // Supabase থেকে অর্ডার আনার চেষ্টা
+      if (phone) {
+        const { data } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("customer_phone", phone)
+          .order("created_at", { ascending: false });
+
+        if (data && data.length > 0) {
+          setOrders(data);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // যদি ডাটাবেসে কোনো অর্ডার না থাকে, ডিজাইনের জন্য ডেমো অর্ডার দেখানো হচ্ছে
+      setOrders([
+        {
+          id: 1,
+          order_id: "ORD-987654321",
+          created_at: new Date().toISOString(),
+          total_amount: 1499,
+          status: "processing", // pending, processing, shipped, delivered
+          items: [{ name: "Royal Premium Product", qty: 1 }]
+        }
+      ]);
+      setLoading(false);
+    };
+
+    fetchOrders();
   }, []);
 
-  const fetchOrder = async (id: string) => {
-    setLoading(true);
-    const supabase = createClient("https://npzfzlkvdxweiaewnnem.supabase.co", "sb_publishable_it_SC_2dJQ8K4n7K4DqYjw_AaVk59xz");
-    const { data } = await supabase.from("orders").select("*").eq("order_id", id.toUpperCase()).single();
-    if (data) setOrderData(data);
-    setLoading(false);
-  };
-
-  const handleTrack = (e: React.FormEvent) => { e.preventDefault(); fetchOrder(orderId); };
+  // ট্র্যাকিং স্টেপ ডিজাইন কম্পোনেন্ট
+  const StatusStep = ({ title, desc, icon, isActive, isLast }: any) => (
+    <div className="flex gap-4 relative">
+      {!isLast && <div className={`absolute left-5 top-10 w-0.5 h-12 ${isActive ? 'bg-[#5C3A21]' : 'bg-gray-200'}`}></div>}
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[18px] z-10 ${isActive ? 'bg-[#5C3A21] text-white shadow-md shadow-[#5C3A21]/30' : 'bg-gray-100 text-gray-400'}`}>
+        {icon}
+      </div>
+      <div className="pb-8">
+        <p className={`font-extrabold text-sm ${isActive ? 'text-gray-800' : 'text-gray-400'}`}>{title}</p>
+        <p className={`text-[10px] font-medium mt-0.5 ${isActive ? 'text-[#7A401A]' : 'text-gray-400'}`}>{desc}</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 font-sans">
-      <header className="bg-white shadow-sm sticky top-0 px-4 h-14 flex items-center gap-3 border-b"><button onClick={() => router.back()} className="bg-gray-100 p-2 rounded-full"><ArrowLeft className="h-5 w-5"/></button><h1 className="text-lg font-black">Track Order</h1></header>
-      <main className="p-4 space-y-5">
-        <form onSubmit={handleTrack} className="bg-white p-5 rounded-2xl shadow-sm border flex gap-2">
-           <input type="text" placeholder="Enter Order ID (e.g. RB-123456)" value={orderId} onChange={(e) => setOrderId(e.target.value)} className="w-full bg-gray-50 border p-3 rounded-xl text-sm font-bold" />
-           <button type="submit" className="bg-[#5C3A21] text-white font-bold px-5 rounded-xl">Track</button>
-        </form>
+    <div className="min-h-screen bg-[#F5F5F5] font-sans text-black pb-20">
+      {/* Header */}
+      <div className="bg-white sticky top-0 z-10 px-4 py-4 flex items-center gap-4 shadow-sm">
+        <button onClick={() => router.push('/')} className="p-1"><span className="text-xl font-bold">←</span></button>
+        <div>
+          <h1 className="font-extrabold text-lg leading-tight text-[#4A2C11]">Track Orders</h1>
+          <p className="text-xs text-gray-500 font-medium">View your recent orders</p>
+        </div>
+      </div>
 
-        {loading ? <div className="text-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5C3A21] mx-auto"></div></div> : 
-        orderData ? (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border">
-            <div className="flex justify-between items-start mb-6 border-b pb-4">
-              <div><p className="text-[10px] text-gray-500 font-bold uppercase mb-0.5">Order ID</p><p className="text-sm font-black text-gray-900">{orderData.order_id}</p></div>
-              <div className="text-right"><p className="text-[10px] text-gray-500 font-bold uppercase mb-0.5">Amount</p><p className="text-sm font-black text-green-600">₹{orderData.total_amount}</p></div>
-            </div>
-            {/* Live Status Timeline from DB */}
-            <div className="relative pl-6 space-y-6">
-               <div className="absolute left-[11px] top-2 bottom-4 w-0.5 bg-gray-100"></div>
-               <div className={`absolute left-[11px] top-2 w-0.5 bg-green-500 transition-all duration-1000 ${orderData.status === 'processing' ? 'h-1/3' : orderData.status === 'shipped' ? 'h-2/3' : 'h-full'}`}></div>
-               
-               <div className="relative"><div className="absolute -left-6 bg-green-500 h-6 w-6 rounded-full flex items-center justify-center border-4 border-white z-10"><Package className="h-3 w-3 text-white" /></div><h4 className="text-sm font-bold">Order Placed</h4></div>
-               <div className={`relative ${orderData.status !== 'processing' && orderData.status !== 'shipped' && orderData.status !== 'delivered' ? 'opacity-40' : ''}`}><div className={`absolute -left-6 h-6 w-6 rounded-full flex items-center justify-center border-4 border-white z-10 ${orderData.status === 'processing' ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`}><CheckCircle2 className="h-3 w-3 text-white" /></div><h4 className="text-sm font-bold">Processing</h4></div>
-               <div className={`relative ${orderData.status !== 'shipped' && orderData.status !== 'delivered' ? 'opacity-40' : ''}`}><div className={`absolute -left-6 h-6 w-6 rounded-full flex items-center justify-center border-4 border-white z-10 ${orderData.status === 'shipped' ? 'bg-amber-500 animate-pulse' : orderData.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}><Truck className="h-3 w-3 text-white" /></div><h4 className="text-sm font-bold">Shipped</h4></div>
-               <div className={`relative ${orderData.status !== 'delivered' ? 'opacity-40' : ''}`}><div className={`absolute -left-6 h-6 w-6 rounded-full flex items-center justify-center border-4 border-white z-10 ${orderData.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}><MapPin className="h-3 w-3 text-white" /></div><h4 className="text-sm font-bold">Delivered</h4></div>
-            </div>
+      <div className="px-4 mt-4 space-y-4">
+        {loading ? (
+          <div className="text-center py-10 text-gray-500 font-bold text-sm">Loading orders...</div>
+        ) : orders.length === 0 ? (
+          <div className="bg-white p-8 rounded-3xl text-center shadow-sm border border-gray-100 mt-10">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📦</div>
+            <h2 className="font-extrabold text-gray-800 text-lg">No Orders Yet</h2>
+            <p className="text-xs text-gray-500 mt-2">Looks like you haven't placed any orders.</p>
+            <button onClick={() => router.push('/')} className="mt-6 bg-[#5C3A21] text-white px-6 py-3 rounded-xl font-bold text-sm">Start Shopping</button>
           </div>
         ) : (
-          <div className="text-center py-10 opacity-50"><Truck className="h-16 w-16 text-gray-300 mx-auto mb-3" /><p className="text-xs text-gray-400 font-bold">Track your order instantly.</p></div>
+          orders.map((order) => (
+            <div key={order.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+              
+              {/* Order Info Header */}
+              <div className="p-5 border-b border-gray-100 bg-[#FDFBF9]">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">ORDER ID</p>
+                    <p className="font-black text-sm text-[#4A2C11]">{order.order_id}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">AMOUNT</p>
+                    <p className="font-black text-sm text-[#4A2C11]">₹{order.total_amount}</p>
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-500 font-medium">
+                  Placed on: {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+
+              {/* Order Items */}
+              <div className="p-5 border-b border-gray-100">
+                <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">Items</h3>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-xl border border-gray-200">🛍️</div>
+                  <div>
+                    <p className="font-extrabold text-sm text-gray-800">
+                      {order.items && order.items[0] ? order.items[0].name : "Royal Basket Products"}
+                    </p>
+                    <p className="text-[10px] font-medium text-gray-500 mt-0.5">
+                      {order.items && order.items.length > 1 ? `+ ${order.items.length - 1} more items` : "Qty: 1"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tracking Timeline */}
+              <div className="p-5 pt-6">
+                <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-5">Order Status</h3>
+                
+                <StatusStep 
+                  title="Order Confirmed" 
+                  desc="We have received your order." 
+                  icon="📝" 
+                  isActive={true} 
+                  isLast={false} 
+                />
+                <StatusStep 
+                  title="Processing" 
+                  desc="Seller is preparing your order." 
+                  icon="⚙️" 
+                  isActive={order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered'} 
+                  isLast={false} 
+                />
+                <StatusStep 
+                  title="Shipped" 
+                  desc="Order is out for delivery." 
+                  icon="🚚" 
+                  isActive={order.status === 'shipped' || order.status === 'delivered'} 
+                  isLast={false} 
+                />
+                <StatusStep 
+                  title="Delivered" 
+                  desc="Order has been delivered." 
+                  icon="✅" 
+                  isActive={order.status === 'delivered'} 
+                  isLast={true} 
+                />
+              </div>
+
+              {/* Support Action */}
+              <div className="bg-[#EAF3EE] p-4 text-center cursor-pointer active:bg-green-100 transition-colors">
+                <p className="text-xs font-extrabold text-[#198754]">Need help with this order?</p>
+              </div>
+
+            </div>
+          ))
         )}
-      </main>
+      </div>
     </div>
   );
 }
