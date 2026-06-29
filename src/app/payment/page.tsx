@@ -19,20 +19,26 @@ export default function PaymentPage() {
     if (total) setAmount(Number(total));
     if (savings) setSavedAmount(Number(savings));
 
-    // ২. অ্যাডমিন প্যানেল থেকে UPI সেটিংস আনা হচ্ছে
-    supabase.from("store_settings").select("*").eq("id", 1).single().then(({data}) => {
-       if(data) {
-           setUpi({ 
-             phonepe: data.phonepe_upi || "", 
-             paytm: data.paytm_upi || "", 
-             generic: data.qr_code_url || "" 
-           });
-           // ডিফল্টভাবে প্রথম যেই অপশনটা থাকবে সেটা সিলেক্ট করে রাখা
-           if(data.phonepe_upi) setSelectedPayment("phonepe");
-           else if(data.paytm_upi) setSelectedPayment("paytm");
-           else if(data.qr_code_url) setSelectedPayment("generic");
-       }
-    });
+    // ২. অ্যাডমিন প্যানেল (payment_settings) থেকে গ্লোবাল UPI সেটিংস আনা হচ্ছে
+    const fetchPaymentSettings = async () => {
+      const { data } = await supabase.from("payment_settings").select("*").limit(1);
+      if (data && data.length > 0) {
+        const settings = data[0];
+        const globalUpi = settings.upi_id || "";
+        
+        setUpi({ 
+          phonepe: settings.phonepe_upi || globalUpi, 
+          paytm: settings.paytm_upi || globalUpi, 
+          generic: settings.qr_code_url || settings.generic_upi || globalUpi 
+        });
+        
+        // ডিফল্টভাবে প্রথম যেই অপশনটা থাকবে সেটা সিলেক্ট করে রাখা
+        if(settings.phonepe_upi || globalUpi) setSelectedPayment("phonepe");
+        else if(settings.paytm_upi || globalUpi) setSelectedPayment("paytm");
+        else if(settings.qr_code_url || globalUpi) setSelectedPayment("generic");
+      }
+    };
+    fetchPaymentSettings();
   }, []);
 
   const handlePay = () => {
