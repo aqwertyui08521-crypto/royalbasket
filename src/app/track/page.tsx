@@ -13,46 +13,30 @@ export default function TrackOrderPage() {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      const savedAddress = localStorage.getItem("saved_address");
-      let phone = "";
-      if (savedAddress) {
-        phone = JSON.parse(savedAddress).phone;
-        setUserPhone(phone);
-      }
+      const saved = localStorage.getItem("saved_address");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.phone) {
+          setUserPhone(parsed.phone);
+          // Supabase থেকে সরাসরি লাইভ অর্ডার টানা হচ্ছে
+          const { data, error } = await supabase
+            .from("orders")
+            .select("*")
+            .eq("customer_phone", parsed.phone)
+            .order("created_at", { ascending: false });
 
-      // Supabase থেকে অর্ডার আনার চেষ্টা
-      if (phone) {
-        const { data } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("customer_phone", phone)
-          .order("created_at", { ascending: false });
-
-        if (data && data.length > 0) {
-          setOrders(data);
-          setLoading(false);
-          return;
+          if (data && data.length > 0) {
+            setOrders(data);
+          }
         }
       }
-
-      // যদি ডাটাবেসে কোনো অর্ডার না থাকে, ডিজাইনের জন্য ডেমো অর্ডার দেখানো হচ্ছে
-      setOrders([
-        {
-          id: 1,
-          order_id: "ORD-987654321",
-          created_at: new Date().toISOString(),
-          total_amount: 1499,
-          status: "processing", // pending, processing, shipped, delivered
-          items: [{ name: "Royal Premium Product", qty: 1 }]
-        }
-      ]);
       setLoading(false);
     };
 
     fetchOrders();
   }, []);
 
-  // ট্র্যাকিং স্টেপ ডিজাইন কম্পোনেন্ট
+  // ট্র্যাকিং স্টেপ ডিজাইন (একদম আগের মতোই)
   const StatusStep = ({ title, desc, icon, isActive, isLast }: any) => (
     <div className="flex gap-4 relative">
       {!isLast && <div className={`absolute left-5 top-10 w-0.5 h-12 ${isActive ? 'bg-[#5C3A21]' : 'bg-gray-200'}`}></div>}
@@ -68,30 +52,32 @@ export default function TrackOrderPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] font-sans text-black pb-20">
-      {/* Header */}
       <div className="bg-white sticky top-0 z-10 px-4 py-4 flex items-center gap-4 shadow-sm">
         <button onClick={() => router.push('/')} className="p-1"><span className="text-xl font-bold">←</span></button>
         <div>
           <h1 className="font-extrabold text-lg leading-tight text-[#4A2C11]">Track Orders</h1>
-          <p className="text-xs text-gray-500 font-medium">View your recent orders</p>
+          <p className="text-xs text-gray-500 font-medium">
+            {userPhone ? `Tracking for: ${userPhone}` : "View your recent orders"}
+          </p>
         </div>
       </div>
 
       <div className="px-4 mt-4 space-y-4">
         {loading ? (
-          <div className="text-center py-10 text-gray-500 font-bold text-sm">Loading orders...</div>
+          <div className="text-center py-10 text-gray-500 font-bold text-sm">Loading real orders...</div>
         ) : orders.length === 0 ? (
           <div className="bg-white p-8 rounded-3xl text-center shadow-sm border border-gray-100 mt-10">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📦</div>
-            <h2 className="font-extrabold text-gray-800 text-lg">No Orders Yet</h2>
-            <p className="text-xs text-gray-500 mt-2">Looks like you haven't placed any orders.</p>
+            <h2 className="font-extrabold text-gray-800 text-lg">No Orders Found</h2>
+            <p className="text-xs text-gray-500 mt-2">
+              {userPhone ? `We couldn't find any orders for ${userPhone}.` : "Please place an order to see it here."}
+            </p>
             <button onClick={() => router.push('/')} className="mt-6 bg-[#5C3A21] text-white px-6 py-3 rounded-xl font-bold text-sm">Start Shopping</button>
           </div>
         ) : (
           orders.map((order) => (
             <div key={order.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
               
-              {/* Order Info Header */}
               <div className="p-5 border-b border-gray-100 bg-[#FDFBF9]">
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -108,7 +94,6 @@ export default function TrackOrderPage() {
                 </p>
               </div>
 
-              {/* Order Items */}
               <div className="p-5 border-b border-gray-100">
                 <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">Items</h3>
                 <div className="flex items-center gap-3">
@@ -118,51 +103,20 @@ export default function TrackOrderPage() {
                       {order.items && order.items[0] ? order.items[0].name : "Royal Basket Products"}
                     </p>
                     <p className="text-[10px] font-medium text-gray-500 mt-0.5">
-                      {order.items && order.items.length > 1 ? `+ ${order.items.length - 1} more items` : "Qty: 1"}
+                      {order.items && order.items.length > 1 ? `+ ${order.items.length - 1} more items` : `Qty: ${order.items[0]?.qty || 1}`}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Tracking Timeline */}
               <div className="p-5 pt-6">
                 <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-5">Order Status</h3>
                 
-                <StatusStep 
-                  title="Order Confirmed" 
-                  desc="We have received your order." 
-                  icon="📝" 
-                  isActive={true} 
-                  isLast={false} 
-                />
-                <StatusStep 
-                  title="Processing" 
-                  desc="Seller is preparing your order." 
-                  icon="⚙️" 
-                  isActive={order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered'} 
-                  isLast={false} 
-                />
-                <StatusStep 
-                  title="Shipped" 
-                  desc="Order is out for delivery." 
-                  icon="🚚" 
-                  isActive={order.status === 'shipped' || order.status === 'delivered'} 
-                  isLast={false} 
-                />
-                <StatusStep 
-                  title="Delivered" 
-                  desc="Order has been delivered." 
-                  icon="✅" 
-                  isActive={order.status === 'delivered'} 
-                  isLast={true} 
-                />
+                <StatusStep title="Order Confirmed" desc="We have received your order." icon="📝" isActive={true} isLast={false} />
+                <StatusStep title="Processing" desc="Seller is preparing your order." icon="⚙️" isActive={order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered'} isLast={false} />
+                <StatusStep title="Shipped" desc="Order is out for delivery." icon="🚚" isActive={order.status === 'shipped' || order.status === 'delivered'} isLast={false} />
+                <StatusStep title="Delivered" desc="Order has been delivered." icon="✅" isActive={order.status === 'delivered'} isLast={true} />
               </div>
-
-              {/* Support Action */}
-              <div className="bg-[#EAF3EE] p-4 text-center cursor-pointer active:bg-green-100 transition-colors">
-                <p className="text-xs font-extrabold text-[#198754]">Need help with this order?</p>
-              </div>
-
             </div>
           ))
         )}
