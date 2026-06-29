@@ -16,6 +16,9 @@ export default function ProductDetails() {
   const [reviewsList, setReviewsList] = useState<any[]>([]);
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchEndX, setTouchEndX] = useState(0);
+  
+  // Toast Notification State
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -55,21 +58,36 @@ export default function ProductDetails() {
     setTouchEndX(0);
   };
 
-  const addToCart = () => {
+  // Updated Add to Cart logic with Smart Notification
+  const addToCart = (isBuyNow = false) => {
     let savedCart = JSON.parse(localStorage.getItem("royal_cart") || "{}");
     savedCart[product.id] = (savedCart[product.id] || 0) + 1;
     localStorage.setItem("royal_cart", JSON.stringify(savedCart));
     window.dispatchEvent(new Event("storage"));
-    alert("Added to Cart! 🛒");
+    
+    // Only show toast if it is NOT a "Buy Now" action
+    if (!isBuyNow) {
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    }
   };
 
+  // Fixed Buy Now logic
   const buyNow = () => {
-    addToCart();
+    addToCart(true); // Passes "true" to skip the popup
     router.push('/checkout');
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900 pb-24">
+    <div className="min-h-screen bg-white font-sans text-gray-900 pb-24 relative">
+      
+      {/* 🚀 Beautiful Toast Notification 🚀 */}
+      {showToast && (
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-[#198754] text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-2 font-black text-sm transition-all duration-300">
+          <span className="text-lg">🛒</span> Added to Cart!
+        </div>
+      )}
+
       <div className="sticky top-0 bg-white z-40 p-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={() => router.back()} className="text-xl font-bold">←</button>
@@ -206,17 +224,15 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* CUSTOMER PHOTOS GALLERY (Flipkart Style) */}
+        {/* CUSTOMER PHOTOS GALLERY */}
         {reviewImages.length > 0 && (
           <div className="mt-6 mb-2">
             <h4 className="text-sm font-extrabold text-gray-900 mb-3">Customer Photos</h4>
             {reviewImages.length >= 3 ? (
               <div className="flex gap-2 h-44">
-                {/* Left Big Image */}
                 <div className="w-1/2 h-full relative rounded-2xl overflow-hidden shadow-sm">
                   <img src={reviewImages[0]} className="w-full h-full object-cover" alt="Review 1" />
                 </div>
-                {/* Right Small Images Grid */}
                 <div className="w-1/2 grid grid-cols-2 grid-rows-2 gap-2 h-full">
                   {reviewImages.slice(1, 5).map((img, idx) => {
                     const isLast = idx === 3;
@@ -235,7 +251,6 @@ export default function ProductDetails() {
                 </div>
               </div>
             ) : (
-              /* Fallback for 1 or 2 images */
               <div className="flex gap-3 overflow-x-auto no-scrollbar">
                 {reviewImages.map((img, idx) => (
                   <img key={idx} src={img} className="w-32 h-32 rounded-2xl object-cover shadow-sm shrink-0" alt={`Review ${idx + 1}`} />
@@ -273,7 +288,7 @@ export default function ProductDetails() {
       <p className="text-xs text-center text-gray-400 font-bold mb-4">Secured by Royal Basket</p>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-3 flex gap-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-        <button onClick={addToCart} className="flex-1 bg-white border-2 border-[#5C3A21] text-[#5C3A21] py-3 rounded-xl font-black text-sm active:scale-95 transition-transform">
+        <button onClick={() => addToCart(false)} className="flex-1 bg-white border-2 border-[#5C3A21] text-[#5C3A21] py-3 rounded-xl font-black text-sm active:scale-95 transition-transform">
           Add to Cart
         </button>
         <button onClick={buyNow} className="flex-1 bg-[#5C3A21] text-white py-3 rounded-xl font-black text-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
