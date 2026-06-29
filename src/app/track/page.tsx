@@ -13,30 +13,32 @@ export default function TrackOrderPage() {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      const saved = localStorage.getItem("saved_address");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.phone) {
-          setUserPhone(parsed.phone);
-          // Supabase থেকে সরাসরি লাইভ অর্ডার টানা হচ্ছে
-          const { data, error } = await supabase
-            .from("orders")
-            .select("*")
-            .eq("customer_phone", parsed.phone)
-            .order("created_at", { ascending: false });
+      try {
+        const saved = localStorage.getItem("saved_address");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.phone) {
+            setUserPhone(parsed.phone);
+            const { data, error } = await supabase
+              .from("orders")
+              .select("*")
+              .eq("customer_phone", parsed.phone)
+              .order("created_at", { ascending: false });
 
-          if (data && data.length > 0) {
-            setOrders(data);
+            if (data && data.length > 0) {
+              setOrders(data);
+            }
           }
         }
+      } catch (error) {
+        console.error("Error loading orders:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-
     fetchOrders();
   }, []);
 
-  // ট্র্যাকিং স্টেপ ডিজাইন (একদম আগের মতোই)
   const StatusStep = ({ title, desc, icon, isActive, isLast }: any) => (
     <div className="flex gap-4 relative">
       {!isLast && <div className={`absolute left-5 top-10 w-0.5 h-12 ${isActive ? 'bg-[#5C3A21]' : 'bg-gray-200'}`}></div>}
@@ -77,7 +79,6 @@ export default function TrackOrderPage() {
         ) : (
           orders.map((order) => (
             <div key={order.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-              
               <div className="p-5 border-b border-gray-100 bg-[#FDFBF9]">
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -111,7 +112,6 @@ export default function TrackOrderPage() {
 
               <div className="p-5 pt-6">
                 <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-5">Order Status</h3>
-                
                 <StatusStep title="Order Confirmed" desc="We have received your order." icon="📝" isActive={true} isLast={false} />
                 <StatusStep title="Processing" desc="Seller is preparing your order." icon="⚙️" isActive={order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered'} isLast={false} />
                 <StatusStep title="Shipped" desc="Order is out for delivery." icon="🚚" isActive={order.status === 'shipped' || order.status === 'delivered'} isLast={false} />
