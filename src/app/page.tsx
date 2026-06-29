@@ -81,14 +81,14 @@ export default function HomePage() {
         <div className="flex justify-between items-center mb-4 relative z-10">
           
           {/* Logo and Text Together */}
-          <div className="flex items-center gap-2">
-            <img 
-              src="/bc1c5fd9-44ad-40ea-91f7-3bf2bae1f2f0.png" 
-              alt="Logo" 
-              className="w-8 h-8 object-contain"
-            />
-            <h1 className="text-2xl font-black text-[#4A2C11] tracking-tight">ROYAL BASKET</h1>
-          </div>
+<div className="flex items-center gap-2">
+  <img 
+    src="/logo.png" 
+    alt="Logo" 
+    className="w-8 h-8 object-cover rounded-full border border-gray-200"
+  />
+  <h1 className="text-2xl font-black text-[#4A2C11] tracking-tight">ROYAL BASKET</h1>
+</div>
           
           {/* Search Button with router.push */}
           <div onClick={() => router.push('/search')} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-lg cursor-pointer active:scale-95 transition-transform">🔍</div>
