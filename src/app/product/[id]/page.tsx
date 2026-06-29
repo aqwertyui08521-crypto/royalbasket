@@ -17,7 +17,7 @@ export default function ProductDetails() {
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchEndX, setTouchEndX] = useState(0);
   
-  // Toast Notification State
+  // Toast Notification State (মডার্ন পপ-আপের জন্য)
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
@@ -46,7 +46,6 @@ export default function ProductDetails() {
   const savings = mrp > sale ? mrp - sale : 0;
   const images = product.gallery?.length > 0 ? product.gallery : (product.image_url ? [product.image_url] : []);
   
-  // Extract all review images for the gallery
   const reviewImages = reviewsList.filter(r => r.image_url).map(r => r.image_url);
 
   const handleTouchEnd = () => {
@@ -58,23 +57,23 @@ export default function ProductDetails() {
     setTouchEndX(0);
   };
 
-  // Updated Add to Cart logic with Smart Notification
+  // Add to Cart লজিক
   const addToCart = (isBuyNow = false) => {
     let savedCart = JSON.parse(localStorage.getItem("royal_cart") || "{}");
     savedCart[product.id] = (savedCart[product.id] || 0) + 1;
     localStorage.setItem("royal_cart", JSON.stringify(savedCart));
     window.dispatchEvent(new Event("storage"));
     
-    // Only show toast if it is NOT a "Buy Now" action
+    // Buy Now এ ক্লিক করলে এই পপ-আপ দেখাবে না, শুধু Add to Cart এ দেখাবে
     if (!isBuyNow) {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     }
   };
 
-  // Fixed Buy Now logic
+  // Buy Now লজিক (সরাসরি চেকআউটে নিয়ে যাবে)
   const buyNow = () => {
-    addToCart(true); // Passes "true" to skip the popup
+    addToCart(true); 
     router.push('/checkout');
   };
 
@@ -205,7 +204,6 @@ export default function ProductDetails() {
       <div className="pt-4 border-t border-gray-100 mt-2 px-4 mb-6">
         <h3 className="text-sm font-extrabold mb-4 text-gray-900">Ratings & Reviews</h3>
         
-        {/* Rating Score Card */}
         <div className="flex items-center gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
           <div className="flex flex-col items-center">
             <span className="text-4xl font-black text-gray-900">{product.rating || 4.5}</span>
@@ -224,7 +222,6 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* CUSTOMER PHOTOS GALLERY */}
         {reviewImages.length > 0 && (
           <div className="mt-6 mb-2">
             <h4 className="text-sm font-extrabold text-gray-900 mb-3">Customer Photos</h4>
@@ -260,7 +257,6 @@ export default function ProductDetails() {
           </div>
         )}
 
-        {/* Live Reviews Text Section */}
         {reviewsList.length > 0 && (
           <div className="mt-6 space-y-6">
             {reviewsList.map((r: any, idx: number) => (
@@ -282,7 +278,6 @@ export default function ProductDetails() {
             ))}
           </div>
         )}
-
       </div>
 
       <p className="text-xs text-center text-gray-400 font-bold mb-4">Secured by Royal Basket</p>
