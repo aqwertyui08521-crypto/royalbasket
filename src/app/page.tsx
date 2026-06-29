@@ -38,7 +38,7 @@ export default function HomePage() {
     fetchData();
   }, []);
 
-  // ১ সেকেন্ড (১০০০ মিলি-সেকেন্ড) পর পর স্লাইড হওয়ার লজিক
+  // ১ সেকেন্ড (১০০০ মিলি-সেকেন্ড) পর পর স্লাইড হওয়ার লজিক
   useEffect(() => {
     if (banners.length <= 1) return;
     const interval = setInterval(() => {
@@ -79,8 +79,19 @@ export default function HomePage() {
       <div className="bg-[#Fdf8f5] p-4 rounded-b-[2.5rem] shadow-sm pb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#EAD9C9] rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
         <div className="flex justify-between items-center mb-4 relative z-10">
-          <h1 className="text-2xl font-black text-[#4A2C11] tracking-tight">ROYAL BASKET</h1>
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-lg">🔍</div>
+          
+          {/* Logo and Text Together */}
+          <div className="flex items-center gap-2">
+            <img 
+              src="/bc1c5fd9-44ad-40ea-91f7-3bf2bae1f2f0.png" 
+              alt="Logo" 
+              className="w-8 h-8 object-contain"
+            />
+            <h1 className="text-2xl font-black text-[#4A2C11] tracking-tight">ROYAL BASKET</h1>
+          </div>
+          
+          {/* Search Button with router.push */}
+          <div onClick={() => router.push('/search')} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-lg cursor-pointer active:scale-95 transition-transform">🔍</div>
         </div>
         
         {/* Dynamic Sliding Banners */}
@@ -204,8 +215,8 @@ export default function HomePage() {
       {/* Slide-up Bottom Sheet */}
       {selectedProduct && (
         <>
-          <div className="fixed inset-0 bg-black/60 z-50 transition-opacity" onClick={() => setSelectedProduct(null)}></div>
-          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 p-5 pb-8 animate-[slideUp_0.3s_ease-out]">
+          <div className="fixed inset-0 bg-black/60 z-[100] transition-opacity" onClick={() => setSelectedProduct(null)}></div>
+          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[101] p-5 pb-8 animate-[slideUp_0.3s_ease-out]">
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5"></div>
             
             <div className="flex gap-4">
@@ -241,6 +252,7 @@ export default function HomePage() {
                 Proceed to Checkout <span className="text-lg leading-none">›</span>
               </button>
             </div>
+     
           </div>
         </>
       )}
