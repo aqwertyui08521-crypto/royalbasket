@@ -13,13 +13,11 @@ export default function PaymentPage() {
   const [savedAmount, setSavedAmount] = useState(0);
 
   useEffect(() => {
-    // ১. চেকআউট পেজ থেকে দাম লোড করা হচ্ছে
     const total = localStorage.getItem("checkout_total");
     const savings = localStorage.getItem("checkout_savings");
     if (total) setAmount(Number(total));
     if (savings) setSavedAmount(Number(savings));
 
-    // ২. অ্যাডমিন প্যানেল থেকে UPI সেটিংস আনা হচ্ছে (সঠিক payment_settings টেবিল থেকে)
     supabase.from("payment_settings").select("*").eq("id", 1).single().then(({data}) => {
        if(data) {
            setUpi({ 
@@ -27,7 +25,6 @@ export default function PaymentPage() {
              paytm: data.paytm || "", 
              generic: data.other_upi || "" 
            });
-           // ডিফল্টভাবে প্রথম যেই অপশনটা থাকবে সেটা সিলেক্ট করে রাখা
            if(data.phonepe) setSelectedPayment("phonepe");
            else if(data.paytm) setSelectedPayment("paytm");
            else if(data.other_upi) setSelectedPayment("generic");
@@ -35,7 +32,8 @@ export default function PaymentPage() {
     });
   }, []);
 
-  const handlePay = () => {
+  // শুধু এই ফাংশনটা আপডেট করা হয়েছে অর্ডার সেভ করার জন্য (ডিজাইন সেম)
+  const handlePay = async () => {
     if (!selectedPayment) return alert("Please select a payment option");
     
     let upiId = "";
@@ -44,8 +42,53 @@ export default function PaymentPage() {
     if (selectedPayment === "generic") upiId = upi.generic;
 
     if (upiId && amount > 0) {
-      const upiLink = `upi://pay?pa=${upiId}&pn=RoyalBasket&am=${amount}.00&cu=INR`;
-      window.location.href = upiLink;
+      try {
+        // ১. অ্যাড্রেস ও কার্ট নেওয়া
+        const address = JSON.parse(localStorage.getItem("saved_address") || "{}");
+        const cart = JSON.parse(localStorage.getItem("royal_cart") || "{}");
+        
+        // ২. প্রোডাক্টের নাম বের করা
+        const { data: prods } = await supabase.from("products").select("id, name");
+        let orderItems: any[] = [];
+        if (prods) {
+           Object.keys(cart).forEach(id => {
+              const p = prods.find(x => x.id.toString() === id.toString());
+              if (p && cart[id] > 0) {
+                 orderItems.push({ name: p.name, qty: cart[id] });
+              }
+           });
+        }
+
+        // ৩. অর্ডার ডাটাবেসে সেভ করা
+        const newOrderId = "ORD-" + Math.floor(100000000 + Math.random() * 900000000);
+        await supabase.from("orders").insert([{
+           order_id: newOrderId,
+           customer_name: address.name || "Guest",
+           customer_phone: address.phone || "",
+           customer_address: address,
+           items: orderItems,
+           total_amount: amount,
+           status: "processing"
+        }]);
+
+        // ৪. কার্ট ক্লিয়ার করা
+        localStorage.removeItem("royal_cart");
+        localStorage.removeItem("checkout_total");
+        localStorage.removeItem("checkout_savings");
+        window.dispatchEvent(new Event("storage"));
+
+        // ৫. UPI পেমেন্ট ওপেন করা
+        const upiLink = `upi://pay?pa=${upiId}&pn=RoyalBasket&am=${amount}.00&cu=INR`;
+        window.location.href = upiLink;
+
+        // ৬. ২ সেকেন্ড পর ট্র্যাকিং পেজে নিয়ে যাওয়া
+        setTimeout(() => {
+           router.push('/track');
+        }, 2000);
+
+      } catch (error) {
+        console.error("Error saving order:", error);
+      }
     } else {
         alert("Payment settings missing or cart empty!");
     }
@@ -72,7 +115,7 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        {/* Bank & Wallet Offers (Visual Only) */}
+        {/* Bank & Wallet Offers */}
         <div className="bg-white p-4 rounded-3xl shadow-sm">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-extrabold text-sm flex items-center gap-2"><span>🏷️</span> Bank & Wallet Offers</h2>
@@ -182,7 +225,6 @@ export default function PaymentPage() {
             <span>To Pay</span><span>₹{amount}</span>
           </div>
           
-          {/* Cancellation Policy */}
           <div className="bg-gray-50 p-3 rounded-xl mt-5 flex gap-2 border border-gray-100">
             <span className="text-gray-400 text-sm">ℹ️</span>
             <p className="text-[9px] text-gray-500 font-medium leading-relaxed">
